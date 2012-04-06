@@ -185,6 +185,8 @@ class InChannel {
  * Representation of an outgoing channel to this node
  */
 class OutChannel {
+	private static final int RESEND_MAX = 5;
+	
 	private HashMap<Integer, RIOPacket> unACKedPackets;
 	private HashMap<Integer, Integer> attemptsMade;
 	private int lastSeqNumSent;
@@ -213,9 +215,9 @@ class OutChannel {
 			Method onTimeoutMethod = Callback.getMethod("onTimeout", parent, new String[]{ "java.lang.Integer", "java.lang.Integer" });
 			RIOPacket newPkt = new RIOPacket(protocol, ++lastSeqNumSent, payload);
 			unACKedPackets.put(lastSeqNumSent, newPkt);
-			attemptsMade.put(lastSeqNumSent, 1);
 			
 			n.send(destAddr, Protocol.DATA, newPkt.pack());
+			attemptsMade.put(lastSeqNumSent, 1);
 			n.addTimeout(new Callback(onTimeoutMethod, parent, new Object[]{ destAddr, lastSeqNumSent }), ReliableInOrderMsgLayer.TIMEOUT);
 		}catch(Exception e) {
 			e.printStackTrace();
@@ -232,7 +234,13 @@ class OutChannel {
 	 */
 	public void onTimeout(RIONode n, Integer seqNum) {
 		if(unACKedPackets.containsKey(seqNum)) {
-			resendRIOPacket(n, seqNum);
+			if (!attemptsMade.containsKey(seqNum)) {
+				throw new IllegalStateException("Found an unACKed packet with no attempts info");
+			} else if (attemptsMade.get(seqNum) < RESEND_MAX) {
+				resendRIOPacket(n, seqNum);
+			} else {
+				attemptsMade.remove(seqNum);
+			}
 		}
 	}
 	
