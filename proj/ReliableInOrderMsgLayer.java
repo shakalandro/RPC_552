@@ -49,11 +49,6 @@ public class ReliableInOrderMsgLayer {
 
 		// at-most-once semantics
 		byte[] seqNumByteArray = Utility.stringToByteArray("" + riopkt.getSeqNum());
-		// need to put in write log here so that we gaurentee use
-		// 1) sender sends A
-		// 2) network is slow, message doesn't get there in time
-		// 3) sender retransmits
-		// 4) 
 		n.send(from, Protocol.ACK, seqNumByteArray);
 		
 		InChannel in = inConnections.get(from);

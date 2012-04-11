@@ -23,6 +23,7 @@ public class RIOTester extends RIONode {
 	private int numFinished;
 
 	public static int NUM_NODES = 10;
+	public static int NUM_MESSAGES = 1;
 
 	private boolean failed = false;
 	
@@ -123,15 +124,15 @@ public class RIOTester extends RIONode {
 		boolean doAgain;
 		
 		do {
-			// choose a destination that we have not sent 100 messages to yet
+			// choose a destination that we have not sent NUM_MESSAGES messages to yet
 			doAgain = false;
 			destAddr = randNumGen.nextInt(RIOTester.NUM_NODES);
 			next = nextNum.get(destAddr);
 			if (next == -1) {
 				doAgain = true;
 			}
-			if (next == 101) {
-				// We just sent 100 to this destination
+			if (next == NUM_MESSAGES + 1) {
+				// We just sent NUM_MESSAGES to this destination
 				nextNum.put(destAddr, -1);
 				if (++numFinished == RIOTester.NUM_NODES) {
 					// If we are finished with everything then stop and don't

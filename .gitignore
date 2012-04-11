@@ -3,3 +3,6 @@ bin/*
 .classpath
 .settings/*
 *~
+*.class
+proj/*.class
+jars/*
