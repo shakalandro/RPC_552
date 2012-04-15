@@ -1,4 +1,7 @@
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.Iterator;
+import java.util.List;
 import java.util.Scanner;
 import java.util.Set;
 
@@ -16,6 +19,8 @@ public class FacebookNode extends RIONode {
 	private static final String ACCEPT_COMMAND = "accept";
 	private static final String MESSAGE_COMMAND = "post";
 	private static final String READ_COMMAND = "read";
+	private static final String SHOW_USERS_COMMAND = "users";
+	private static final String SHOW_FRIENDS_COMMAND = "mypals";	
 
 	// File prefixes. Each of these is followed by the name of the user they belong to.
 	private static final String FRIENDS_PREFIX = ".friends_;";
@@ -86,7 +91,11 @@ public class FacebookNode extends RIONode {
 			}
 			String userName = commandScanner.next();
 
-			loginUser(userName);
+			try {
+				loginUser(userName);
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
 		}
 
 		else if (commandName.equals(LOGOUT_COMMAND)) {
@@ -100,7 +109,11 @@ public class FacebookNode extends RIONode {
 			}
 			String userName = commandScanner.next();
 
-			requestFriend(userName);
+			try {
+				requestFriend(userName);
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
 		}
 
 		else if (commandName.equals(VIEW_REQUESTS_COMMAND)) {
@@ -114,7 +127,11 @@ public class FacebookNode extends RIONode {
 			}
 
 			String userName = commandScanner.next();
-			acceptFriend(userName);
+			try {
+				acceptFriend(userName);
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
 		}
 
 		else if (commandName.equals(MESSAGE_COMMAND)) {
@@ -131,7 +148,20 @@ public class FacebookNode extends RIONode {
 		}
 
 		else if (commandName.equals(READ_COMMAND)) {
-			readPosts();
+			try {
+				readPosts();
+			} catch (Exception e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
+
+		else if (commandName.equals(SHOW_USERS_COMMAND)) {
+			showUsers();
+		}
+		
+		else if (commandName.equals(SHOW_FRIENDS_COMMAND)) {
+			showFriends();
 		}
 
 		else {
@@ -140,6 +170,7 @@ public class FacebookNode extends RIONode {
 	}
 
 	// -------------------------CREATING NEW USER ----------------------//
+
 
 	// Creates a new user on the system. 3 files are written for each user. Posts, friends, and
 	// friend-requests.
@@ -442,7 +473,7 @@ public class FacebookNode extends RIONode {
 
 	private void readPosts() throws SecurityException, ClassNotFoundException,
 			NoSuchMethodException {
-		
+
 		if (!confirmLoggedIn()) {
 			return;
 		}
@@ -468,44 +499,274 @@ public class FacebookNode extends RIONode {
 		String filename = MESSAGES_PREFIX + loggedInUser;
 		get(SERVER_ID, filename, printResultsCallback, tryAgainCallback);
 	}
-	
-	
+
 	// ------------------------- POST MESSAGE ------------------------------------ //
 
-	private void postMessage(String string) {
+	private void postMessage(String message) {
 		if (!confirmLoggedIn()) {
 			return;
+		}
+
+		// First step to posting a message is to get a list of all of this user's friends.
+		getFriendList(null, message);
+	}
+
+	// Fetches the friends list for this user. On success, passes control off to
+	// addMessageToAllWalls.
+	private void getFriendList(Integer errorCode, String message) {
+		// Create a callback to try again in the case of failure.
+		String[] failParamTypes = { "java.lang.Integer", "java.lang.String" };
+		Method tryAgain = Callback.getMethod("getFriendList", this, failParamTypes);
+		Object[] failParams = { null, message };
+		Callback tryAgainCallback = new Callback(tryAgain, this, failParams);
+
+		// Create a callback to call in the case of success.
+		String[] goodParamTypes = { "java.lang.String", "java.lang.String" };
+		Method addToWalls = Callback.getMethod("addMessageToAllWalls", this, goodParamTypes);
+		Object[] goodParams = { null, message };
+		Callback addToWallsCallback = new Callback(addToWalls, this, goodParams);
+
+		String filename = FRIENDS_PREFIX + loggedInUser;
+		get(SERVER_ID, filename, addToWallsCallback, tryAgainCallback);
+	}
+
+	private void addMessageToAllWalls(String friendList, String message) {
+		// Get a non-duped set of all of my friends.
+		Set<String> friends = new HashSet<String>();
+		Scanner friendScanner = new Scanner(friendList);
+		while (friendScanner.hasNext()) {
+			friends.add(friendScanner.next());
+		}
+
+		// Convert this set of friends to a list.
+		List<String> friendListList = new ArrayList<String>(friends);
+
+		// We'll iteratively append this post on to each of my friend's post files.
+		// Start with the first friend in the friendListList.
+		addMessage(null, friendListList, 0, message);
+	}
+
+	private void addMessage(Integer errorCode, List<String> friendList, Integer friendIndex,
+			String message) {
+		// Create a callback to try again if we fail.
+		String[] failParamTypes =
+				{ "java.lang.Integer", "java.util.List<String>", "java.lang.Integer",
+						"java.lang.String" };
+		Method tryAgain = Callback.getMethod("addMessage", this, failParamTypes);
+		Object[] failParams = { null, friendList, friendIndex, message };
+		Callback tryAgainCallback = new Callback(tryAgain, this, failParams);
+
+		// If this is the last friend in the list, create a callback to print a success message.
+		// Otherwise, print a callback that will do this same method with the next friend in the
+		// list.
+		Callback successCallback;
+		if (friendIndex.equals(friendList.size() - 1)) {
+			String[] endParamTypes = {};
+			Method printSuccess = Callback.getMethod("messagePostSuccess", this, endParamTypes);
+			Object[] successParams = {};
+			successCallback = new Callback(printSuccess, this, successParams);
+		} else {
+			Object[] nextFriendParams = { null, friendList, friendIndex + 1, message };
+			successCallback = new Callback(tryAgain, this, nextFriendParams);
+		}
+
+		// Format the message so that we append the user's name to the front and add a blank line
+		// after it.
+		message = loggedInUser + " says... " + message + "\n\n";
+		String filename = MESSAGES_PREFIX + friendList.get(friendIndex);
+		append(SERVER_ID, filename, message, successCallback, tryAgainCallback);
+	}
+
+	// ----------------------------------- LIST FRIEND REQUESTS-------------------------------- //
+
+	private void showRequests() {
+		if (!confirmLoggedIn()) {
+			return;
+		}
+
+		// First step to posting a message is to get a list of all of this user's friends.
+		String filename = FRIENDS_PREFIX + loggedInUser;
+		showAllOfList(null, filename);
+	}
+
+	// ----------------------------------- ACCEPT FRIEND REQUEST -------------------------------- //
+
+	private void acceptFriend(String userName) throws SecurityException, ClassNotFoundException,
+			NoSuchMethodException {
+		if (!confirmLoggedIn()) {
+			return;
+		}
+
+		// Make a callback to print out a scolding message letting the user know that the person
+		// isn't making
+		// a friend request of them.
+		String[] failParamTypes = { "java.lang.String" };
+		Method failMessage = Callback.getMethod("scoldUser", this, failParamTypes);
+		Object[] failParams = { userName };
+		Callback notOnListCallback = new Callback(failMessage, this, failParams);
+
+		// Make a callback that processes the friend acceptance.
+		String[] goodParamTypes = { null, "java.lang.String" };
+		Method addToFriends = Callback.getMethod("addToTheirFriends", this, goodParamTypes);
+		Object[] goodParams = { null, userName };
+		Callback onListCallback = new Callback(addToFriends, this, goodParams);
+
+		String filename = REQUESTS_PREFIX + loggedInUser;
+		checkForNameInList(null, userName, filename, onListCallback, notOnListCallback);
+	}
+
+	// Prints a message to let user know that can't accept a non-existent friend request.
+	private void scoldUser(String username) {
+		System.out.println(username + " don't wanna be yo friend.");
+	}
+
+	// Adds the current user to the list of friends for username. In case of success, control passes
+	// on to addToMyFriends.
+	private void addToTheirFriends(Integer errorCode, String username) {
+		// Create a callback to try again in the case of failure.
+		String[] failParamTypes = { "java.lang.Integer", "java.lang.String" };
+		Method tryAgain = Callback.getMethod("addToTheirFriends", this, failParamTypes);
+		Object[] failParams = { null, username };
+		Callback tryAgainCallback = new Callback(tryAgain, this, failParams);
+
+		// Create a callback to pass control onto addToMyFriends.
+		Method continueMethod = Callback.getMethod("addToMyFriends", this, failParamTypes);
+		Callback continuationCallback = new Callback(continueMethod, this, failParams);
+
+		String filename = FRIENDS_PREFIX + username;
+		String newContent = loggedInUser + " ";
+		append(SERVER_ID, filename, newContent, continuationCallback, tryAgainCallback);
+	}
+
+	// Adds username to list of friends for current user.
+	private void addToMyFriends(Integer errorCode, String username) {
+		// Create a callback to try again in the case of failure.
+		String[] failParamTypes = { "java.lang.Integer", "java.lang.String" };
+		Method tryAgain = Callback.getMethod("addToMyFriends", this, failParamTypes);
+		Object[] failParams = { null, username };
+		Callback tryAgainCallback = new Callback(tryAgain, this, failParams);
+
+		// Create a callback to pass control onto removeFromRequestList.
+		Method continueMethod = Callback.getMethod("getRequestList", this, failParamTypes);
+		Callback continuationCallback = new Callback(continueMethod, this, failParams);
+
+		String filename = FRIENDS_PREFIX + loggedInUser;
+		String newContent = username + " ";
+		append(SERVER_ID, filename, newContent, continuationCallback, tryAgainCallback);
+	}
+
+	private void getRequestList(Integer errorCode, String username) {
+		// Create a callback to try again in the case of failure.
+		String[] failParamTypes = { "java.lang.Integer", "java.lang.String" };
+		Method tryAgain = Callback.getMethod("getRequestList", this, failParamTypes);
+		Object[] failParams = { null, username };
+		Callback tryAgainCallback = new Callback(tryAgain, this, failParams);
+
+		// Create a callback to pass control onto removeFromRequestList.
+		String[] goodParamTypes = { "java.lang.String", "java.lang.String" };
+		Method continueMethod = Callback.getMethod("removeFromRequestList", this, goodParamTypes);
+		Object[] goodParams = {null, username};
+		Callback continuationCallback = new Callback(continueMethod, this, goodParams);
+
+		String filename = REQUESTS_PREFIX + loggedInUser;
+		get(SERVER_ID, filename, continuationCallback, tryAgainCallback);
+	}
+
+	private void removeFromRequestList(Integer errorCode, String fileContents, String username) {
+		Set<String> pendingRequests = new HashSet<String>();
+		Scanner friendScanner = new Scanner(fileContents);
+		while (friendScanner.hasNext()) {
+			pendingRequests.add(friendScanner.next());
+		}
+		
+		// Remove the person that we just accepted as a friend from our friend request list.
+		pendingRequests.remove(username);
+
+		// Write the new list of friend requests back out to a string.
+		StringBuilder fixedFriendList = new StringBuilder();
+		Iterator<String> listIterator = pendingRequests.iterator();
+		while (listIterator.hasNext()) {
+			fixedFriendList.append(listIterator.next() + " ");
+		}
+				
+		// Create a callback to try again in the case of failure.
+		String[] failParamTypes = { "java.lang.Integer", "java.lang.String", "java.lang.String" };
+		Method tryAgain = Callback.getMethod("removeFromRequestList", this, failParamTypes);
+		Object[] failParams = { null, fileContents, username };
+		Callback tryAgainCallback = new Callback(tryAgain, this, failParams);
+
+		// Create a callback to pass control onto acceptedFriendSuccess.
+		String[] goodParamTypes = {"java.lang.String"};
+		Method continueMethod = Callback.getMethod("acceptedFriendSuccess", this, failParamTypes);
+		Object[] goodParams = { username };
+		Callback continuationCallback = new Callback(continueMethod, this, goodParams);
+
+		// Now attempt to write over the old requests file with the cleaned up one.
+		
+		String filename = REQUESTS_PREFIX + loggedInUser;
+		String newFileContents = fixedFriendList.toString();
+		put(SERVER_ID, filename, newFileContents, continuationCallback, tryAgainCallback);
+	}
+	
+	private void acceptedFriendSuccess(String username) {
+		System.out.println("Happy Day! We've made " + username + " our special friend!");
+	}
+
+	// ----------------------------------- LIST ALL USERS -------------------------------- //
+
+	private void showUsers() {
+		showAllOfList(null, ALL_USERS_FILE);
+	}
+	
+	// ----------------------------------- LIST ALL FRIENDS --------------------------- //
+	private void showFriends() {
+		if (!confirmLoggedIn()) {
+			return;
+		}
+		
+		String filename = FRIENDS_PREFIX + loggedInUser;
+		showAllOfList(null, filename);
+	}
+	
+	// ----------------------------------- UTILITY -------------------------------- //
+
+	// Prints out a de-duped list of all friend requests that the current user has.
+	private void showAllOfList(Integer errorCode, String filename) {
+		// Create a callback to try again in the case of failure.
+		String[] failParamTypes = { "java.lang.Integer", "java.lang.String" };
+		Method tryAgain = Callback.getMethod("showAllOfList", this, failParamTypes);
+		Object[] failParams = { null, filename };
+		Callback tryAgainCallback = new Callback(tryAgain, this, failParams);
+
+		// Create a callback to print the results once we've got 'em.
+		String[] goodParamTypes = { "java.lang.String" };
+		Method printResults = Callback.getMethod("printList", this, goodParamTypes);
+		Object[] goodParams = { null };
+		Callback printCallback = new Callback(printResults, this, goodParams);
+
+		get(SERVER_ID, filename, printCallback, tryAgainCallback);
+	}
+
+	// Prints out the list with duplicates removed.
+	private void printList(String happyList) {
+		Set<String> pendingRequests = new HashSet<String>();
+		Scanner friendScanner = new Scanner(happyList);
+		while (friendScanner.hasNext()) {
+			pendingRequests.add(friendScanner.next());
+		}
+
+		List<String> niceRequestList = new ArrayList<String>(pendingRequests);
+		if (niceRequestList.isEmpty()) {
+			System.out.println("The list is empty. Probably your own fault?");
+		} else {
+			System.out.println("\n");
+			for (String person : niceRequestList) {
+				System.out.println(person);
+			}
 		}
 	}
 	
 	
-	
-	
-	// - each user also has a file of “posts”
-	// - get each and be sure to de-dupe it.
-	// - when post a message to all friends, goes through the list of friends and writes into each of
-	// their “posts” files.
-	// Print the user name along with the post.
-	// Append a blank line after each post.
-
-	
-	
-	
-	
-	
-	
-	
-
-	private void acceptFriend(String userName) {
-		// TODO Auto-generated method stub
-
-	}
-
-	private void showRequests() {
-		// TODO Auto-generated method stub
-
-	}
-
 	// If userName is present in fileContents, then calls the userExistsCallback. Otherwise calls
 	// the userNoExistsCallback.
 	private void checkFileForName(String fileContents, String userName,
@@ -558,27 +819,4 @@ public class FacebookNode extends RIONode {
 		// We need to fetch the contents of the friends file for this user.
 		get(SERVER_ID, filename, checkForNameCallback, tryAgainCallback);
 	}
-
 }
-
-//
-// Accept a friend
-// - do de-duping so that people who have requested you multiple times still only show up once on
-// the list.
-
-// - command to get a list of outstanding friend requests
-
-// - if say accept X:
-// - write your name to their list of friends
-// - write their name to your list.
-// - remove that name (if it is there) and then write the whole file again without that name there
-//
-// Post a message to all friends
-// - each user also has a file of “posts”
-// - get each and be sure to de-dupe it.
-// - when post a message to all friends, goes through the list of friends and writes into each of
-// their “posts” files.
-// Print the user name along with the post.
-// Append a blank line after each post.
-
-//
