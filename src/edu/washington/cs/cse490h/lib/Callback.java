@@ -48,6 +48,13 @@ public class Callback {
 	public void setParams(Object[] params) {
 		this.params = params;
 	}
+	
+	/**
+	 * Gets the params to be passed to the method when it is invoked.
+	 */
+	public Object[] getParams() {
+		return params;
+	}
 
 	/**
 	 * Invokes the callback
