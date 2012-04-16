@@ -23,7 +23,17 @@ public class RPCRequestPacket {
     private Command request;
     private byte[] payload;
 
-    public RPCRequestPacket(int serverSessionID, int requestID,
+    public static RPCRequestPacket getPacket(RPCNode node, int sessionID,
+            int ID, Command requestType, byte[] requestPayload) {
+        if (requestPayload.length > MAX_PAYLOAD_SIZE) {
+            System.err.println("Invalid payload size in RPCRequestPacket");
+            node.fail();
+            return null;
+        }
+        return new RPCRequestPacket(sessionID, ID, requestType, requestPayload);
+    }
+
+    private RPCRequestPacket(int serverSessionID, int requestID,
             Command request, byte[] payload) {
         if (payload.length > MAX_PAYLOAD_SIZE) {
             throw new IllegalArgumentException("Invalid RPC payload");
