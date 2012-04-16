@@ -11,11 +11,19 @@ import edu.washington.cs.cse490h.lib.PersistentStorageWriter;
 import edu.washington.cs.cse490h.lib.Utility;
 
 public class RPCNode extends RIONode {
-	
-	public static double getFailureRate() { return 0; }
-	public static double getRecoveryRate() { return 0; }
-	public static double getDropRate() { return 0; }
-	public static double getDelayRate() { return 0; }
+
+    // public static double getFailureRate() { return 0; }
+    public static double getRecoveryRate() {
+        return 0;
+    }
+
+    public static double getDropRate() {
+        return 0;
+    }
+
+    public static double getDelayRate() {
+        return 0;
+    }
 
     // Session ID -- on start up, Servers initialize this value using the
     // current time. Client invoke an RPC call to fetch this value from the
@@ -255,8 +263,8 @@ public class RPCNode extends RIONode {
         byte[] payloadBytes = Utility.stringToByteArray(payload);
 
         if (RPCRequestPacket.validSizePayload(payloadBytes)) {
-            RPCRequestPacket pkt = new RPCRequestPacket(serverSessionID,
-                    requestID++, command, payloadBytes);
+            RPCRequestPacket pkt = RPCRequestPacket.getPacket(this,
+                    serverSessionID, requestID++, command, payloadBytes);
             RPCRequest request = new RPCRequest(success, failure, pkt,
                     serverAddr, filename);
             requestQueue.add(request);
@@ -414,11 +422,13 @@ public class RPCNode extends RIONode {
 
         if (request == Command.SESSION) {
             // Request for session ID
-            result = new RPCResultPacket(pkt.getRequestID(), Status.SUCCESS,
+            result = RPCResultPacket.getPacket(this, pkt.getRequestID(),
+                    Status.SUCCESS,
                     Utility.stringToByteArray(serverSessionID + ""));
         } else if (pkt.serverSessionID() != serverSessionID) {
             // Session IDs don't match
-            result = new RPCResultPacket(pkt.getRequestID(), Status.CRASH,
+            result = RPCResultPacket.getPacket(this, pkt.getRequestID(),
+                    Status.CRASH,
                     Utility.stringToByteArray(serverSessionID + ""));
         } else if (pkt.getRequestID() == lastReceivedRequestID) {
             // Identical to last request
@@ -429,7 +439,8 @@ public class RPCNode extends RIONode {
                 // only stored in memory and the server is single-threaded, I
                 // don't think we can ever get here. If somehow we did, we'd
                 // want to return CRASH
-                result = new RPCResultPacket(pkt.getRequestID(), Status.CRASH,
+                result = RPCResultPacket.getPacket(this, pkt.getRequestID(),
+                        Status.CRASH,
                         Utility.stringToByteArray(serverSessionID + ""));
             }
         } else if (pkt.getRequestID() < lastReceivedRequestID) {
@@ -462,7 +473,8 @@ public class RPCNode extends RIONode {
                             pkt.getRequestID());
                     break;
                 default:
-                    logError("Node " + addr + ": received unknown request " + request);
+                    logError("Node " + addr + ": received unknown request "
+                            + request);
                     return;
                 }
             }
@@ -492,7 +504,7 @@ public class RPCNode extends RIONode {
         if (!Utility.fileExists(this, filename)) {
             logError("Node " + this.addr + ": could not get " + filename
                     + ", does not exist.");
-            return new RPCResultPacket(id, Status.NOT_EXIST,
+            return RPCResultPacket.getPacket(this, id, Status.NOT_EXIST,
                     Utility.stringToByteArray(Status.NOT_EXIST.toString()));
         }
         try {
@@ -502,16 +514,17 @@ public class RPCNode extends RIONode {
             if (size > MAX_FILE_SIZE) {
                 logError("Node " + this.addr + ": could not get " + filename
                         + ", file is too large to transmit.");
-                return new RPCResultPacket(id, Status.TOO_LARGE,
+                return RPCResultPacket.getPacket(this, id, Status.TOO_LARGE,
                         Utility.stringToByteArray(Status.TOO_LARGE.toString()));
             } else {
-                return new RPCResultPacket(id, Status.SUCCESS,
-                        Utility.stringToByteArray(new String(buf, 0, MAX_FILE_SIZE)));
+                return RPCResultPacket.getPacket(this, id, Status.SUCCESS,
+                        Utility.stringToByteArray(new String(buf, 0,
+                                MAX_FILE_SIZE)));
             }
         } catch (IOException e) {
             logError("Node " + this.addr + ": failed to get " + filename
                     + " because a system IOException occurred.");
-            return new RPCResultPacket(id, Status.FAILURE,
+            return RPCResultPacket.getPacket(this, id, Status.FAILURE,
                     Utility.stringToByteArray(e.getMessage()));
         }
     }
@@ -528,18 +541,20 @@ public class RPCNode extends RIONode {
         if (Utility.fileExists(this, filename)) {
             logError("Node " + this.addr + ": could not create " + filename
                     + ", already exists.");
-            return new RPCResultPacket(id, Status.ALREADY_EXISTS,
-                    Utility.stringToByteArray(Status.ALREADY_EXISTS.toString()));
+            return RPCResultPacket
+                    .getPacket(this, id, Status.ALREADY_EXISTS,
+                            Utility.stringToByteArray(Status.ALREADY_EXISTS
+                                    .toString()));
         }
         try {
             PersistentStorageWriter creator = this.getWriter(filename, false);
             creator.close();
-            return new RPCResultPacket(id, Status.SUCCESS,
+            return RPCResultPacket.getPacket(this, id, Status.SUCCESS,
                     Utility.stringToByteArray("creating: " + filename));
         } catch (IOException e) {
             logError("Node " + this.addr + ": failed to create " + filename
                     + " because a system IOException occurred.");
-            return new RPCResultPacket(id, Status.FAILURE,
+            return RPCResultPacket.getPacket(this, id, Status.FAILURE,
                     Utility.stringToByteArray(e.getMessage()));
         }
     }
@@ -557,13 +572,13 @@ public class RPCNode extends RIONode {
         if (!Utility.fileExists(this, filename)) {
             logError("Node " + this.addr + ": could not put " + filename
                     + ", does not exist.");
-            return new RPCResultPacket(id, Status.NOT_EXIST,
+            return RPCResultPacket.getPacket(this, id, Status.NOT_EXIST,
                     Utility.stringToByteArray(Status.NOT_EXIST.toString()));
         }
         try {
             // Get old file contents into string
             PersistentStorageReader reader = getReader(filename);
-            
+
             char[] buf = new char[MAX_FILE_SIZE];
             reader.read(buf);
             String oldFileData = new String(buf);
@@ -583,12 +598,12 @@ public class RPCNode extends RIONode {
             writer = this.getWriter(TEMP_PUT_FILE, false);
             writer.delete();
             writer.close();
-            return new RPCResultPacket(id, Status.SUCCESS,
+            return RPCResultPacket.getPacket(this, id, Status.SUCCESS,
                     Utility.stringToByteArray("putting to: " + filename));
         } catch (IOException e) {
             logError("Node " + this.addr + ": failed to put " + filename
                     + " because a system IOException occurred.");
-            return new RPCResultPacket(id, Status.FAILURE,
+            return RPCResultPacket.getPacket(this, id, Status.FAILURE,
                     Utility.stringToByteArray(e.getMessage()));
         }
     }
@@ -607,7 +622,7 @@ public class RPCNode extends RIONode {
         if (!Utility.fileExists(this, filename)) {
             logError("Node " + this.addr + ": could not append to " + filename
                     + ", does not exist.");
-            return new RPCResultPacket(id, Status.NOT_EXIST,
+            return RPCResultPacket.getPacket(this, id, Status.NOT_EXIST,
                     Utility.stringToByteArray(Status.NOT_EXIST.toString()));
         }
         try {
@@ -622,20 +637,20 @@ public class RPCNode extends RIONode {
                 logError("Node " + this.addr + ": could not append to "
                         + filename + ", contents was " + overflow
                         + " characters too long.");
-                return new RPCResultPacket(id, Status.TOO_LARGE,
+                return RPCResultPacket.getPacket(this, id, Status.TOO_LARGE,
                         Utility.stringToByteArray(Status.TOO_LARGE.toString()));
             } else {
                 PersistentStorageWriter appender = this.getWriter(filename,
                         true);
                 appender.append(contents);
                 appender.close();
-                return new RPCResultPacket(id, Status.SUCCESS,
+                return RPCResultPacket.getPacket(this, id, Status.SUCCESS,
                         Utility.stringToByteArray("appending to: " + filename));
             }
         } catch (IOException e) {
             logError("Node " + this.addr + ": failed to delete " + filename
                     + " because a system IOException occurred.");
-            return new RPCResultPacket(id, Status.FAILURE,
+            return RPCResultPacket.getPacket(this, id, Status.FAILURE,
                     Utility.stringToByteArray(e.getMessage()));
         }
     }
@@ -653,19 +668,19 @@ public class RPCNode extends RIONode {
     private RPCResultPacket delete(String filename, int id) {
         if (!Utility.fileExists(this, filename)) {
             logError("Node " + this.addr + ": " + filename + " does not exist.");
-            return new RPCResultPacket(id, Status.NOT_EXIST,
+            return RPCResultPacket.getPacket(this, id, Status.NOT_EXIST,
                     Utility.stringToByteArray(Status.NOT_EXIST.toString()));
         }
         try {
             PersistentStorageWriter deleter = this.getWriter(filename, false);
             deleter.delete();
             deleter.close();
-            return new RPCResultPacket(id, Status.SUCCESS,
+            return RPCResultPacket.getPacket(this, id, Status.SUCCESS,
                     Utility.stringToByteArray("deleting: " + filename));
         } catch (IOException e) {
             logError("Node " + this.addr + ": failed to delete " + filename
                     + " because a system IOException occurred.");
-            return new RPCResultPacket(id, Status.FAILURE,
+            return RPCResultPacket.getPacket(this, id, Status.FAILURE,
                     Utility.stringToByteArray(e.getMessage()));
         }
     }
