@@ -6,3 +6,4 @@ bin/*
 *.class
 proj/*.class
 jars/*
+*.log
