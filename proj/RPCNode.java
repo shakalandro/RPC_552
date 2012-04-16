@@ -506,7 +506,7 @@ public class RPCNode extends RIONode {
                         Utility.stringToByteArray(Status.TOO_LARGE.toString()));
             } else {
                 return new RPCResultPacket(id, Status.SUCCESS,
-                        Utility.stringToByteArray(new String(buf)));
+                        Utility.stringToByteArray(new String(buf, 0, MAX_FILE_SIZE)));
             }
         } catch (IOException e) {
             logError("Node " + this.addr + ": failed to get " + filename
