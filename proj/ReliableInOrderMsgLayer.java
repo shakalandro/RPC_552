@@ -258,7 +258,7 @@ class InChannel {
  * Representation of an outgoing channel to this node
  */
 class OutChannel {
-    private static final int MAX_SEND_ATTEMPTS = 5;
+    private static final int MAX_SEND_ATTEMPTS = Integer.MAX_VALUE - 1;
 
     private HashMap<Integer, RIOPacket> unACKedPackets;
     private HashMap<Integer, Integer> attempts;
