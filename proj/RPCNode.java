@@ -145,7 +145,7 @@ public class RPCNode extends RIONode {
     }
 
     public void put(int serverAddr, String filename, String contents) {
-        put(serverAddr, filename, contents);
+        put(serverAddr, filename, contents, null, null);
     }
 
     public void put(int serverAddr, String filename, String contents,
@@ -254,8 +254,7 @@ public class RPCNode extends RIONode {
      * Client-side handler for RPC Result packets. Logs a message to the console
      * (unless this is a reply to a session id request) and calls the relevant
      * callback (if it exists) dependent on whether status of the result is
-     * SUCCESS. The method assumes RPC Result packets will only be received for
-     * the request currently at the head of the request queue.
+     * SUCCESS.
      * 
      * @param from
      * @param pkt
@@ -265,6 +264,11 @@ public class RPCNode extends RIONode {
         // The original request, will remove from queue unless a failed session
         // ID request
         RPCRequest request = requestQueue.peek();
+
+        if (pkt.getRequestID() != request.getPacket().getRequestID()) {
+            // This reply is not for the current request, let's ignore it
+            return;
+        }
 
         Status status = pkt.getStatus();
         Command requestType = request.getPacket().getRequest();

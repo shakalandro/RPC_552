@@ -43,7 +43,7 @@ public class RPCRequestPacket {
      * @return The server session id
      */
     public int serverSessionID() {
-        return this.serverSessionID();
+        return this.serverSessionID;
     }
 
     /**
