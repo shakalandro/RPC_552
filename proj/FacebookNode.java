@@ -9,7 +9,7 @@ import java.lang.reflect.*;
 
 import edu.washington.cs.cse490h.lib.Callback;
 
-public class FacebookNode extends RIONode {
+public class FacebookNode extends RPCNode {
 	// The available facebook commands that can be entered by the user.
 	private static final String CREATE_COMMAND = "create";
 	private static final String LOGIN_COMMAND = "login";
@@ -34,23 +34,11 @@ public class FacebookNode extends RIONode {
 	private static final Integer FILE_TOO_LARGE = 30;
 	private static final Integer CRASH = 40;
 
-	private static final String SERVER_ID = "5";
+	private static final int SERVER_ID = 0;
 
 	private static final String ALL_USERS_FILE = ".users";
 
 	private String loggedInUser = null;
-
-	@Override
-	public void onRIOReceive(Integer from, int protocol, byte[] msg) {
-		// TODO Auto-generated method stub
-
-	}
-
-	@Override
-	public void start() {
-		// TODO Auto-generated method stub
-
-	}
 
 	@Override
 	public void onCommand(String command) {
@@ -118,7 +106,12 @@ public class FacebookNode extends RIONode {
 		}
 
 		else if (commandName.equals(VIEW_REQUESTS_COMMAND)) {
-			showRequests();
+			try {
+				showRequests();
+			} catch (Exception e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
 		}
 
 		else if (commandName.equals(ACCEPT_COMMAND)) {
@@ -145,7 +138,12 @@ public class FacebookNode extends RIONode {
 			while (commandScanner.hasNext()) {
 				messageBuilder.append(commandScanner.next());
 			}
-			postMessage(messageBuilder.toString());
+			try {
+				postMessage(messageBuilder.toString());
+			} catch (Exception e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
 		}
 
 		else if (commandName.equals(READ_COMMAND)) {
@@ -158,11 +156,20 @@ public class FacebookNode extends RIONode {
 		}
 
 		else if (commandName.equals(SHOW_USERS_COMMAND)) {
-			showUsers();
+			try {
+				showUsers();
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
 		}
 		
 		else if (commandName.equals(SHOW_FRIENDS_COMMAND)) {
-			showFriends();
+			try {
+				showFriends();
+			} catch (Exception e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
 		}
 
 		else {
@@ -195,7 +202,7 @@ public class FacebookNode extends RIONode {
 	// Checks to see if userName is already in use. If so, calls the userExistsCallback. Otherwise,
 	// calls the userNoExistsCallback.
 	private void userExists(Integer errorCode, String userName, Callback userExistsCallback,
-			Callback userNoExistsCallback) {
+			Callback userNoExistsCallback) throws SecurityException, ClassNotFoundException, NoSuchMethodException {
 
 		// Create a failure callback that just calls this method again.
 		String[] failParamTypes =
@@ -276,7 +283,7 @@ public class FacebookNode extends RIONode {
 		create(SERVER_ID, filename, successCallback, tryAgainCallback);
 	}
 
-	private void createFriendsFile(Integer errorCode, String userName) {
+	private void createFriendsFile(Integer errorCode, String userName) throws SecurityException, ClassNotFoundException, NoSuchMethodException {
 
 		// If we're calling because we failed, check if the failure is because the file already
 		// exists.
@@ -302,7 +309,7 @@ public class FacebookNode extends RIONode {
 		create(SERVER_ID, filename, successCallback, tryAgainCallback);
 	}
 
-	private void createRequestsFile(Integer errorCode, String userName) {
+	private void createRequestsFile(Integer errorCode, String userName) throws SecurityException, ClassNotFoundException, NoSuchMethodException {
 		// If we're calling because we failed, check if the failure is because the file already
 		// exists.
 		// If so, we can just move on to appending the name to the list of existing users.
@@ -453,7 +460,7 @@ public class FacebookNode extends RIONode {
 
 	// Adds the name of the currently logged-in user to the requests file for the user specified
 	// by userName.
-	private void addToRequestsFile(Integer errorCode, String userName) {
+	private void addToRequestsFile(Integer errorCode, String userName) throws SecurityException, ClassNotFoundException, NoSuchMethodException {
 		if (errorCode != null && errorCode.equals(FILE_TOO_LARGE)) {
 			System.out.println("Sorry, " + userName + " has too many pending friend requests.");
 			return;
@@ -515,7 +522,7 @@ public class FacebookNode extends RIONode {
 
 	// ------------------------- POST MESSAGE ------------------------------------ //
 
-	private void postMessage(String message) {
+	private void postMessage(String message) throws SecurityException, ClassNotFoundException, NoSuchMethodException {
 		if (!confirmLoggedIn()) {
 			return;
 		}
@@ -526,7 +533,7 @@ public class FacebookNode extends RIONode {
 
 	// Fetches the friends list for this user. On success, passes control off to
 	// addMessageToAllWalls.
-	private void getFriendList(Integer errorCode, String message) {
+	private void getFriendList(Integer errorCode, String message) throws SecurityException, ClassNotFoundException, NoSuchMethodException {
 		// Create a callback to try again in the case of failure.
 		String[] failParamTypes = { "java.lang.Integer", "java.lang.String" };
 		Method tryAgain = Callback.getMethod("getFriendList", this, failParamTypes);
@@ -543,7 +550,7 @@ public class FacebookNode extends RIONode {
 		get(SERVER_ID, filename, addToWallsCallback, tryAgainCallback);
 	}
 
-	private void addMessageToAllWalls(String friendList, String message) {
+	private void addMessageToAllWalls(String friendList, String message) throws SecurityException, ClassNotFoundException, NoSuchMethodException, IllegalAccessException, InvocationTargetException {
 		// Get a non-duped set of all of my friends.
 		Set<String> friends = new HashSet<String>();
 		Scanner friendScanner = new Scanner(friendList);
@@ -560,7 +567,7 @@ public class FacebookNode extends RIONode {
 	}
 
 	private void addMessage(Integer errorCode, List<String> friendList, Integer friendIndex,
-			String message) {
+			String message) throws SecurityException, ClassNotFoundException, NoSuchMethodException, IllegalAccessException, InvocationTargetException {
 		// Create a callback to try again if we fail.
 		String[] failParamTypes =
 				{ "java.lang.Integer", "java.util.List<String>", "java.lang.Integer",
@@ -606,7 +613,7 @@ public class FacebookNode extends RIONode {
 
 	// ----------------------------------- LIST FRIEND REQUESTS-------------------------------- //
 
-	private void showRequests() {
+	private void showRequests() throws SecurityException, ClassNotFoundException, NoSuchMethodException {
 		if (!confirmLoggedIn()) {
 			return;
 		}
@@ -649,7 +656,7 @@ public class FacebookNode extends RIONode {
 
 	// Adds the current user to the list of friends for username. In case of success, control passes
 	// on to addToMyFriends.
-	private void addToTheirFriends(Integer errorCode, String username) {
+	private void addToTheirFriends(Integer errorCode, String username) throws SecurityException, ClassNotFoundException, NoSuchMethodException {
 		
 		// Check to see if appending would make file too large.
 		if (errorCode != null && errorCode.equals(FILE_TOO_LARGE)) {
@@ -673,7 +680,7 @@ public class FacebookNode extends RIONode {
 	}
 
 	// Adds username to list of friends for current user.
-	private void addToMyFriends(Integer errorCode, String username) {
+	private void addToMyFriends(Integer errorCode, String username) throws SecurityException, ClassNotFoundException, NoSuchMethodException {
 		// Check to see if appending would make file too large.
 		if (errorCode != null && errorCode.equals(FILE_TOO_LARGE)) {
 			System.out.println("Sorry, but you have too many friends.");
@@ -695,7 +702,7 @@ public class FacebookNode extends RIONode {
 		append(SERVER_ID, filename, newContent, continuationCallback, tryAgainCallback);
 	}
 
-	private void getRequestList(Integer errorCode, String username) {
+	private void getRequestList(Integer errorCode, String username) throws SecurityException, ClassNotFoundException, NoSuchMethodException {
 		// Create a callback to try again in the case of failure.
 		String[] failParamTypes = { "java.lang.Integer", "java.lang.String" };
 		Method tryAgain = Callback.getMethod("getRequestList", this, failParamTypes);
@@ -712,7 +719,7 @@ public class FacebookNode extends RIONode {
 		get(SERVER_ID, filename, continuationCallback, tryAgainCallback);
 	}
 
-	private void removeFromRequestList(Integer errorCode, String fileContents, String username) {
+	private void removeFromRequestList(Integer errorCode, String fileContents, String username) throws SecurityException, ClassNotFoundException, NoSuchMethodException {
 		Set<String> pendingRequests = new HashSet<String>();
 		Scanner friendScanner = new Scanner(fileContents);
 		while (friendScanner.hasNext()) {
@@ -754,12 +761,12 @@ public class FacebookNode extends RIONode {
 
 	// ----------------------------------- LIST ALL USERS -------------------------------- //
 
-	private void showUsers() {
+	private void showUsers() throws SecurityException, ClassNotFoundException, NoSuchMethodException {
 		showAllOfList(null, ALL_USERS_FILE);
 	}
 	
 	// ----------------------------------- LIST ALL FRIENDS --------------------------- //
-	private void showFriends() {
+	private void showFriends() throws SecurityException, ClassNotFoundException, NoSuchMethodException {
 		if (!confirmLoggedIn()) {
 			return;
 		}
@@ -771,7 +778,7 @@ public class FacebookNode extends RIONode {
 	// ----------------------------------- UTILITY -------------------------------- //
 
 	// Prints out a de-duped list of all friend requests that the current user has.
-	private void showAllOfList(Integer errorCode, String filename) {
+	private void showAllOfList(Integer errorCode, String filename) throws SecurityException, ClassNotFoundException, NoSuchMethodException {
 		// Create a callback to try again in the case of failure.
 		String[] failParamTypes = { "java.lang.Integer", "java.lang.String" };
 		Method tryAgain = Callback.getMethod("showAllOfList", this, failParamTypes);
@@ -837,7 +844,7 @@ public class FacebookNode extends RIONode {
 	// Checks file by name of filename for userName. If userName is present, calls
 	// userExistsCallback. Otherwise calls userNoExistsCallback.
 	private void checkForNameInList(Integer errorCode, String userName, String filename,
-			Callback userExistsCallback, Callback userNoExistsCallback) {
+			Callback userExistsCallback, Callback userNoExistsCallback) throws SecurityException, ClassNotFoundException, NoSuchMethodException {
 		// Create a failure callback that just calls this method again.
 		String[] failParamTypes =
 				{ "java.lang.Integer", "java.lang.String", "java.lang.String",
