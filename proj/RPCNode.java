@@ -12,8 +12,14 @@ import edu.washington.cs.cse490h.lib.Utility;
 
 public class RPCNode extends RIONode {
 
-    // public static double getFailureRate() { return 0; }
-    // public static double getRecoveryRate() { return 0; }
+    public static double getFailureRate() {
+        return 0 / 100.0;
+    }
+
+    public static double getRecoveryRate() {
+        return 75 / 100.0;
+    }
+
     // public static double getDropRate() { return 0; }
     // public static double getDelayRate() { return 0; }
 
@@ -264,9 +270,9 @@ public class RPCNode extends RIONode {
         } else {
             // Cannot handle requests with payloads larger than (packet size -
             // headers)
-            logError("Node " + this.addr + ": Error: " + command
-                    + " on server " + serverAddr + " and file " + filename
-                    + " returned error code " + Status.TOO_LARGE.toString());
+            logError("Error: " + command + " on server " + serverAddr
+                    + " and file " + filename + " returned error code "
+                    + Status.TOO_LARGE.getMsg());
         }
     }
 
@@ -345,13 +351,18 @@ public class RPCNode extends RIONode {
                 callback = request.getSuccess();
 
                 // Log success message
-                logOutput("Node " + this.addr + ": Successfully completed: "
-                        + requestType + " on server " + request.getServerAddr()
+                logOutput("Successfully completed: " + requestType
+                        + " on server " + request.getServerAddr()
                         + " and file " + request.getFilename());
 
                 // If GET command result, print contents of file to console
                 if (requestType == Command.GET) {
-                    logOutput(Utility.byteArrayToString(pkt.getPayload()));
+                    String file = Utility.byteArrayToString(pkt.getPayload());
+                    logOutput(file);
+                    if (callback != null) {
+                        Object[] params = callback.getParams();
+                        params[0] = file;
+                    }
                 }
 
             } else {
@@ -364,10 +375,14 @@ public class RPCNode extends RIONode {
 
                 callback = request.getFailure();
                 // Log that error occurred
-                logError("Node " + this.addr + ": Error: " + requestType
-                        + " on server " + request.getServerAddr()
-                        + " and file " + request.getFilename()
-                        + " returned error code " + status.toString());
+                logError("Error: " + requestType + " on server "
+                        + request.getServerAddr() + " and file "
+                        + request.getFilename() + " returned error code "
+                        + status.getMsg());
+                if (callback != null) {
+                    Object[] params = callback.getParams();
+                    params[0] = status.getCode();
+                }
 
             }
 
@@ -497,7 +512,7 @@ public class RPCNode extends RIONode {
             logError("Node " + this.addr + ": could not get " + filename
                     + ", does not exist.");
             return RPCResultPacket.getPacket(this, id, Status.NOT_EXIST,
-                    Utility.stringToByteArray(Status.NOT_EXIST.toString()));
+                    Utility.stringToByteArray(Status.NOT_EXIST.getMsg()));
         }
         try {
             PersistentStorageReader getter = this.getReader(filename);
@@ -507,12 +522,10 @@ public class RPCNode extends RIONode {
                 logError("Node " + this.addr + ": could not get " + filename
                         + ", file is too large to transmit.");
                 return RPCResultPacket.getPacket(this, id, Status.TOO_LARGE,
-                        Utility.stringToByteArray(Status.TOO_LARGE.toString()));
-            } else {
-                return RPCResultPacket.getPacket(this, id, Status.SUCCESS,
-                        Utility.stringToByteArray(new String(buf, 0,
-                                MAX_FILE_SIZE)));
+                        Utility.stringToByteArray(Status.TOO_LARGE.getMsg()));
             }
+            return RPCResultPacket.getPacket(this, id, Status.SUCCESS, Utility
+                    .stringToByteArray(new String(buf, 0, MAX_FILE_SIZE)));
         } catch (IOException e) {
             logError("Node " + this.addr + ": failed to get " + filename
                     + " because a system IOException occurred.");
@@ -533,10 +546,8 @@ public class RPCNode extends RIONode {
         if (Utility.fileExists(this, filename)) {
             logError("Node " + this.addr + ": could not create " + filename
                     + ", already exists.");
-            return RPCResultPacket
-                    .getPacket(this, id, Status.ALREADY_EXISTS,
-                            Utility.stringToByteArray(Status.ALREADY_EXISTS
-                                    .toString()));
+            return RPCResultPacket.getPacket(this, id, Status.ALREADY_EXISTS,
+                    Utility.stringToByteArray(Status.ALREADY_EXISTS.getMsg()));
         }
         try {
             PersistentStorageWriter creator = this.getWriter(filename, false);
@@ -565,7 +576,7 @@ public class RPCNode extends RIONode {
             logError("Node " + this.addr + ": could not put " + filename
                     + ", does not exist.");
             return RPCResultPacket.getPacket(this, id, Status.NOT_EXIST,
-                    Utility.stringToByteArray(Status.NOT_EXIST.toString()));
+                    Utility.stringToByteArray(Status.NOT_EXIST.getMsg()));
         }
         try {
             // Get old file contents into string
@@ -615,8 +626,9 @@ public class RPCNode extends RIONode {
             logError("Node " + this.addr + ": could not append to " + filename
                     + ", does not exist.");
             return RPCResultPacket.getPacket(this, id, Status.NOT_EXIST,
-                    Utility.stringToByteArray(Status.NOT_EXIST.toString()));
+                    Utility.stringToByteArray(Status.NOT_EXIST.getMsg()));
         }
+
         try {
             PersistentStorageReader reader = this.getReader(filename);
             char[] dummy_buf = new char[MAX_FILE_SIZE];
@@ -630,15 +642,14 @@ public class RPCNode extends RIONode {
                         + filename + ", contents was " + overflow
                         + " characters too long.");
                 return RPCResultPacket.getPacket(this, id, Status.TOO_LARGE,
-                        Utility.stringToByteArray(Status.TOO_LARGE.toString()));
-            } else {
-                PersistentStorageWriter appender = this.getWriter(filename,
-                        true);
-                appender.append(contents);
-                appender.close();
-                return RPCResultPacket.getPacket(this, id, Status.SUCCESS,
-                        Utility.stringToByteArray("appending to: " + filename));
+                        Utility.stringToByteArray(Status.TOO_LARGE.getMsg()));
             }
+            PersistentStorageWriter appender = this.getWriter(filename, true);
+            appender.append(contents);
+            appender.close();
+            return RPCResultPacket.getPacket(this, id, Status.SUCCESS,
+                    Utility.stringToByteArray("appending to: " + filename));
+
         } catch (IOException e) {
             logError("Node " + this.addr + ": failed to delete " + filename
                     + " because a system IOException occurred.");
@@ -661,7 +672,7 @@ public class RPCNode extends RIONode {
         if (!Utility.fileExists(this, filename)) {
             logError("Node " + this.addr + ": " + filename + " does not exist.");
             return RPCResultPacket.getPacket(this, id, Status.NOT_EXIST,
-                    Utility.stringToByteArray(Status.NOT_EXIST.toString()));
+                    Utility.stringToByteArray(Status.NOT_EXIST.getMsg()));
         }
         try {
             PersistentStorageWriter deleter = this.getWriter(filename, false);
