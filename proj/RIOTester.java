@@ -1,3 +1,4 @@
+
 import java.io.PrintStream;
 import java.util.HashMap;
 import java.util.Random;
@@ -13,7 +14,7 @@ import edu.washington.cs.cse490h.lib.Utility;
  */
 public class RIOTester extends RIONode {
 	// The RIO layer is not correct in the presence of node failures.
-	public static double getFailureRate() { return 0/100.0; }
+	public static double getFailureRate() { return 1/100.0; }
 	public static double getDropRate() { return 25/100.0; }
 	public static double getDelayRate() { return 50/100.0; }
 
@@ -23,6 +24,7 @@ public class RIOTester extends RIONode {
 	private int numFinished;
 
 	public static int NUM_NODES = 10;
+	public static int NUM_MESSAGES = 100;
 
 	private boolean failed = false;
 	
@@ -44,6 +46,11 @@ public class RIOTester extends RIONode {
 		
 		receivedNums = new HashMap<Integer, Integer>();
 		nextNum = new HashMap<Integer, Integer>();
+		for (int i = 0; i < RIOTester.NUM_NODES; ++i) {
+			nextNum.put(i, 0);
+			receivedNums.put(i, -1);
+		}
+		
 		randNumGen = new Random();
 		numFinished = 0;
 	}
@@ -51,9 +58,6 @@ public class RIOTester extends RIONode {
 	@Override
 	public void onCommand(String command) {
 		if (command.equals("begin")) {
-			for (int i = 0; i < RIOTester.NUM_NODES; ++i) {
-				nextNum.put(i, 0);
-			}
 			sendNextNum();
 		}
 		return;
@@ -67,20 +71,10 @@ public class RIOTester extends RIONode {
 		}
 		Integer i = Integer.parseInt(Utility.byteArrayToString(msg));
 		Integer receivedNum = receivedNums.get(from);
-		if (receivedNum == null) {
-			// If we've never seen this sender before
-			if (i == 0) {
-				correctReceive(from, 0);
-			} else {
-				failure(from, i);
-			}
+		if (i == receivedNum + 1) {
+			correctReceive(from, i);	
 		} else {
-			// If we've previously encountered the sender
-			if (i == receivedNum + 1) {
-				correctReceive(from, i);
-			} else {
-				failure(from, i);
-			}
+			failure(from, i);
 		}
 	}
 
@@ -109,6 +103,7 @@ public class RIOTester extends RIONode {
 	public void failure(int from, int i) {
 		logError("FAILURE OF THE RIO MESSAGE LAYER!!  Received " + i
 				+ " instead of " + receivedNums.get(from) + " from " + from);
+		receivedNums.put(from, i);
 		failed = true;
 		fail();
 	}
@@ -123,15 +118,15 @@ public class RIOTester extends RIONode {
 		boolean doAgain;
 		
 		do {
-			// choose a destination that we have not sent 100 messages to yet
+			// choose a destination that we have not sent NUM_MESSAGES messages to yet
 			doAgain = false;
 			destAddr = randNumGen.nextInt(RIOTester.NUM_NODES);
 			next = nextNum.get(destAddr);
 			if (next == -1) {
 				doAgain = true;
 			}
-			if (next == 101) {
-				// We just sent 100 to this destination
+			if (next == NUM_MESSAGES + 1) {
+				// We just sent NUM_MESSAGES to this destination
 				nextNum.put(destAddr, -1);
 				if (++numFinished == RIOTester.NUM_NODES) {
 					// If we are finished with everything then stop and don't

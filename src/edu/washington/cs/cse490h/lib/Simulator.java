@@ -14,7 +14,7 @@ import edu.washington.cs.cse490h.lib.Node.NodeCrashException;
 
 /**
  * Manages a simulation, where all nodes are running in the same process, in the
- * same thread.
+ * same thread
  */
 public class Simulator extends Manager {
 

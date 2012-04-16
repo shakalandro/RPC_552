@@ -1,0 +1,8 @@
+start 0
+start 1
+time
+0 begin
+1 begin
+1 create 0 tester
+1 put 0 tester hello
+1 append 0 tester cheerio
