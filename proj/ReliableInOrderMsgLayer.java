@@ -1,8 +1,11 @@
+import java.io.IOException;
 import java.lang.reflect.Method;
 import java.util.HashMap;
 import java.util.LinkedList;
 
 import edu.washington.cs.cse490h.lib.Callback;
+import edu.washington.cs.cse490h.lib.PersistentStorageReader;
+import edu.washington.cs.cse490h.lib.PersistentStorageWriter;
 import edu.washington.cs.cse490h.lib.Utility;
 
 /**
@@ -15,6 +18,8 @@ import edu.washington.cs.cse490h.lib.Utility;
  */
 public class ReliableInOrderMsgLayer {
 	public static int TIMEOUT = 3;
+	public static String IN_LOG_FILE = ".rio_in_log";
+	public static String OUT_LOG_FILE = ".rio_out_log";
 	
 	private HashMap<Integer, InChannel> inConnections;
 	private HashMap<Integer, OutChannel> outConnections;
@@ -54,12 +59,36 @@ public class ReliableInOrderMsgLayer {
 		InChannel in = inConnections.get(from);
 		if(in == null) {
 			in = new InChannel();
+			// Set the reciever last delivered sequence number if one exists
+			if (Utility.fileExists(n, IN_LOG_FILE + from)) {
+				try {
+					PersistentStorageReader r = n.getReader(IN_LOG_FILE + from);
+					String num = r.readLine();
+					if (num != null && !num.trim().isEmpty()) {
+						int last_delivered = Integer.parseInt(num.trim());
+						in = new InChannel(last_delivered);
+					}
+				} catch (IOException e) {
+					// We should never get here
+					System.err.println("Node" + n.addr + ": Could not read log file (" + IN_LOG_FILE + from + "), but it should exist");
+				} catch (NumberFormatException e) {
+					// Reaching this means we failed to write to the log
+					System.err.println("Node" + n.addr + ": Could not parse sequence number (" + IN_LOG_FILE + from + ")");
+					e.printStackTrace();
+				}
+			}
 			inConnections.put(from, in);
 		}
 		
 		LinkedList<RIOPacket> toBeDelivered = in.gotPacket(riopkt);
 		for(RIOPacket p: toBeDelivered) {
-			// deliver in-order the next sequence of packets
+			// set the last delivered sequence number
+			try {
+				PersistentStorageWriter w = n.getWriter(IN_LOG_FILE + from, false);
+				w.write(p.getSeqNum());
+			} catch (IOException e) {
+				System.err.println("Node" + n.addr + ": Could not write log file (" + IN_LOG_FILE + from + ") packet");
+			}
 			n.onRIOReceive(from, p.getProtocol(), p.getPayload());
 		}
 	}
@@ -74,7 +103,16 @@ public class ReliableInOrderMsgLayer {
 	 */
 	public void RIOAckReceive(int from, byte[] msg) {
 		int seqNum = Integer.parseInt( Utility.byteArrayToString(msg) );
-		outConnections.get(from).gotACK(seqNum);
+		if (outConnections.containsKey(from)) {
+			try {
+				PersistentStorageWriter w = n.getWriter(OUT_LOG_FILE + from, false);
+				w.write(seqNum);
+			} catch (IOException e) {
+				// Should never get here because the file does not exist.
+				System.err.println("Node" + n.addr + ": Could not write log file (" + OUT_LOG_FILE + from + ") packet");
+			}
+			outConnections.get(from).gotACK(seqNum);
+		}
 	}
 
 	/**
@@ -92,6 +130,22 @@ public class ReliableInOrderMsgLayer {
 		OutChannel out = outConnections.get(destAddr);
 		if(out == null) {
 			out = new OutChannel(this, destAddr);
+			if (Utility.fileExists(n, OUT_LOG_FILE + destAddr)) {
+				try {
+					PersistentStorageReader r = n.getReader(OUT_LOG_FILE + destAddr);
+					String num = r.readLine();
+					if (num != null && !num.trim().isEmpty()) {
+						System.err.println("num: " + num);
+						int last_acked = Integer.parseInt(num.trim());
+						out = new OutChannel(this, destAddr, last_acked);
+					}
+				} catch (IOException e) {
+					// We should never get here
+					System.err.println("Node " + n.addr + ": Could not read log file (" + OUT_LOG_FILE + destAddr + "), but it should exist");
+				} catch (NumberFormatException e) {
+					System.err.println("Node" + n.addr + ": Could not parse sequence number (" + OUT_LOG_FILE + destAddr + ")");
+				}
+			}
 			outConnections.put(destAddr, out);
 		}
 		
@@ -130,6 +184,11 @@ public class ReliableInOrderMsgLayer {
 class InChannel {
 	private int lastSeqNumDelivered;
 	private HashMap<Integer, RIOPacket> outOfOrderMsgs;
+	
+	InChannel(int seqNum) {
+		this();
+		lastSeqNumDelivered = seqNum - 1;
+	}
 	
 	InChannel(){
 		lastSeqNumDelivered = -1;
@@ -188,15 +247,18 @@ class OutChannel {
 	private static final int RESEND_MAX = 5;
 	
 	private HashMap<Integer, RIOPacket> unACKedPackets;
-	private HashMap<Integer, Integer> attemptsMade;
 	private int lastSeqNumSent;
 	private ReliableInOrderMsgLayer parent;
 	private int destAddr;
 	
+	OutChannel(ReliableInOrderMsgLayer parent, int destAddr, int seqNum) {
+		this(parent, destAddr);
+		this.lastSeqNumSent = seqNum;
+	}
+	
 	OutChannel(ReliableInOrderMsgLayer parent, int destAddr){
 		lastSeqNumSent = -1;
 		unACKedPackets = new HashMap<Integer, RIOPacket>();
-		attemptsMade = new HashMap<Integer, Integer>();
 		this.parent = parent;
 		this.destAddr = destAddr;
 	}
@@ -218,7 +280,6 @@ class OutChannel {
 			unACKedPackets.put(lastSeqNumSent, newPkt);
 			
 			n.send(destAddr, Protocol.DATA, newPkt.pack());
-			attemptsMade.put(lastSeqNumSent, 1);
 			n.addTimeout(new Callback(onTimeoutMethod, parent, new Object[]{ destAddr, lastSeqNumSent }), ReliableInOrderMsgLayer.TIMEOUT);
 		}catch(Exception e) {
 			e.printStackTrace();
@@ -235,13 +296,7 @@ class OutChannel {
 	 */
 	public void onTimeout(RIONode n, Integer seqNum) {
 		if(unACKedPackets.containsKey(seqNum)) {
-			if (!attemptsMade.containsKey(seqNum)) {
-				throw new IllegalStateException("Found an unACKed packet with no attempts info");
-			} else if (attemptsMade.get(seqNum) < RESEND_MAX) {
-				resendRIOPacket(n, seqNum);
-			} else {
-				attemptsMade.remove(seqNum);
-			}
+			resendRIOPacket(n, seqNum);
 		}
 	}
 	
@@ -254,7 +309,6 @@ class OutChannel {
 	 */
 	protected void gotACK(int seqNum) {
 		unACKedPackets.remove(seqNum);
-		attemptsMade.remove(seqNum);
 	}
 	
 	/**
@@ -271,7 +325,6 @@ class OutChannel {
 			RIOPacket riopkt = unACKedPackets.get(seqNum);
 			
 			n.send(destAddr, Protocol.DATA, riopkt.pack());
-			attemptsMade.put(seqNum, attemptsMade.get(seqNum) + 1);
 			n.addTimeout(new Callback(onTimeoutMethod, parent, new Object[]{ destAddr, seqNum }), ReliableInOrderMsgLayer.TIMEOUT);
 		}catch(Exception e) {
 			e.printStackTrace();

@@ -3,6 +3,7 @@ import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 
 import edu.washington.cs.cse490h.lib.Packet;
 import edu.washington.cs.cse490h.lib.Utility;
@@ -113,7 +114,17 @@ public class RIOPacket {
 		}
 		return null;
 	}
-
+	
+	/**
+	 * Reads a byte array from a stream to create a RIOPacket object
+	 * Assumes the array has been formatted using pack method in RIOPacket
+	 * @param in InputStream from which to read
+	 * @return RIOPacket object created or null if the byte[] representation was corrupted
+	 */
+	public static RIOPacket unpack(InputStream in) {
+		return unpack(new DataInputStream(in));
+	}
+	
 	/**
 	 * String representation of a RIOPacket
 	 */
