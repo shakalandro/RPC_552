@@ -563,6 +563,7 @@ public class RPCNode extends RIONode {
         try {
             // Get old file contents into string
             PersistentStorageReader reader = getReader(filename);
+            
             char[] buf = new char[MAX_FILE_SIZE];
             reader.read(buf);
             String oldFileData = new String(buf);
@@ -579,7 +580,7 @@ public class RPCNode extends RIONode {
             writer.close();
 
             // Delete temp file
-            writer = this.getWriter(filename, false);
+            writer = this.getWriter(TEMP_PUT_FILE, false);
             writer.delete();
             writer.close();
             return new RPCResultPacket(id, Status.SUCCESS,
