@@ -166,7 +166,7 @@ public class FacebookNode extends RIONode {
 		}
 
 		else {
-			System.err.println("Unrecognized command. Enter 'myface help' for available options.");
+			System.err.println("Unrecognized command. Enter 'myface+ help' for available options.");
 		}
 	}
 
@@ -357,7 +357,7 @@ public class FacebookNode extends RIONode {
 
 	// Prints a message confirming success in creating a new user.
 	private void createSuccess(String userName) {
-		System.out.println("Welcome to MyFace, " + userName);
+		System.out.println("Welcome to myface+, " + userName);
 	}
 
 	// ------------------------ USER LOGIN --------------------------------------//
