@@ -258,13 +258,14 @@ class InChannel {
  * Representation of an outgoing channel to this node
  */
 class OutChannel {
-    private static final int RESEND_MAX = 5;
+    private static final int MAX_SEND_ATTEMPTS = 5;
 
     private HashMap<Integer, RIOPacket> unACKedPackets;
+    private HashMap<Integer, Integer> attempts;
     private int lastSeqNumSent;
     private ReliableInOrderMsgLayer parent;
     private int destAddr;
-
+    
     OutChannel(ReliableInOrderMsgLayer parent, int destAddr, int seqNum) {
         this(parent, destAddr);
         this.lastSeqNumSent = seqNum;
@@ -273,6 +274,7 @@ class OutChannel {
     OutChannel(ReliableInOrderMsgLayer parent, int destAddr) {
         lastSeqNumSent = -1;
         unACKedPackets = new HashMap<Integer, RIOPacket>();
+        attempts = new HashMap<Integer, Integer>();
         this.parent = parent;
         this.destAddr = destAddr;
     }
@@ -296,6 +298,7 @@ class OutChannel {
             unACKedPackets.put(lastSeqNumSent, newPkt);
 
             n.send(destAddr, Protocol.DATA, newPkt.pack());
+            attempts.put(newPkt.getSeqNum(), 1);
             n.addTimeout(new Callback(onTimeoutMethod, parent, new Object[] {
                     destAddr, lastSeqNumSent }),
                     ReliableInOrderMsgLayer.TIMEOUT);
@@ -327,6 +330,7 @@ class OutChannel {
      */
     protected void gotACK(int seqNum) {
         unACKedPackets.remove(seqNum);
+        attempts.remove(seqNum);
     }
 
     /**
@@ -339,13 +343,18 @@ class OutChannel {
      */
     private void resendRIOPacket(RIONode n, int seqNum) {
         try {
-            Method onTimeoutMethod = Callback.getMethod("onTimeout", parent,
-                    new String[] { "java.lang.Integer", "java.lang.Integer" });
-            RIOPacket riopkt = unACKedPackets.get(seqNum);
-
-            n.send(destAddr, Protocol.DATA, riopkt.pack());
-            n.addTimeout(new Callback(onTimeoutMethod, parent, new Object[] {
-                    destAddr, seqNum }), ReliableInOrderMsgLayer.TIMEOUT);
+        	if (attempts.containsKey(seqNum) && attempts.get(seqNum) < MAX_SEND_ATTEMPTS) {
+	            Method onTimeoutMethod = Callback.getMethod("onTimeout", parent,
+	                    new String[] { "java.lang.Integer", "java.lang.Integer" });
+	            RIOPacket riopkt = unACKedPackets.get(seqNum);
+	
+	            n.send(destAddr, Protocol.DATA, riopkt.pack());
+	            n.addTimeout(new Callback(onTimeoutMethod, parent, new Object[] {
+	                    destAddr, seqNum }), ReliableInOrderMsgLayer.TIMEOUT);
+        	} else {
+        		System.err.println("Node " + n.addr + ": Reached max send attempts for packet " + seqNum);
+        		attempts.remove(seqNum);
+        	}
         } catch (Exception e) {
             e.printStackTrace();
         }
