@@ -11,6 +11,11 @@ import edu.washington.cs.cse490h.lib.PersistentStorageWriter;
 import edu.washington.cs.cse490h.lib.Utility;
 
 public class RPCNode extends RIONode {
+	
+	public static double getFailureRate() { return 0; }
+	public static double getRecoveryRate() { return 0; }
+	public static double getDropRate() { return 0; }
+	public static double getDelayRate() { return 0; }
 
     // Session ID -- on start up, Servers initialize this value using the
     // current time. Client invoke an RPC call to fetch this value from the
@@ -315,7 +320,8 @@ public class RPCNode extends RIONode {
         // ID request
         RPCRequest request = requestQueue.peek();
 
-        if (pkt.getRequestID() != request.getPacket().getRequestID()) {
+        if (request == null
+                || pkt.getRequestID() != request.getPacket().getRequestID()) {
             // This reply is not for the current request, let's ignore it
             return;
         }
