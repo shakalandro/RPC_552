@@ -327,6 +327,13 @@ public class RPCNode extends RIONode {
                 }
 
             } else {
+
+                // May need to update our serverSessionID
+                if (status == Status.CRASH) {
+                    serverSessionID = Integer.parseInt(Utility
+                            .byteArrayToString(pkt.getPayload()));
+                }
+
                 callback = request.getFailure();
                 // Log that error occurred
                 logError("Node " + this.addr + ": Error: " + requestType
@@ -395,7 +402,7 @@ public class RPCNode extends RIONode {
                 // don't think we can ever get here. If somehow we did, we'd
                 // want to return CRASH
                 result = new RPCResultPacket(pkt.getRequestID(), Status.CRASH,
-                        new byte[0]);
+                        Utility.stringToByteArray(serverSessionID + ""));
             }
         } else if (pkt.getRequestID() < lastReceivedRequestID) {
             // "Old" request
