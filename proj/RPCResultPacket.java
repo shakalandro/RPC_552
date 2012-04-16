@@ -7,10 +7,10 @@ import java.io.IOException;
 import edu.washington.cs.cse490h.lib.Utility;
 
 /**
- * This conveys the header for an RPC packet. This is carried in the payload of
- * a RIOPacket, and in turn the data being transferred is carried in the payload
- * of the RPCPacket packet. (And the RIOPacket is carried as the payload of a
- * Packet, etc).
+ * This conveys the header for an RPC result packet. This is carried in the
+ * payload of a RIOPacket, and in turn the data being transferred is carried in
+ * the payload of the RPCResultPacket packet. (And the RIOPacket is carried as
+ * the payload of a Packet, etc).
  */
 public class RPCResultPacket {
 
@@ -68,8 +68,8 @@ public class RPCResultPacket {
     }
 
     /**
-     * Convert the RPCPacket packet object into a byte array for sending over
-     * the wire. Format: protocol = 1 byte, payload <= MAX_PAYLOAD_SIZE bytes
+     * Convert the RPCResultPacket object into a byte array for sending over the
+     * wire. Format: protocol = 1 byte, payload <= MAX_PAYLOAD_SIZE bytes
      * 
      * @return A byte[] for transporting over the wire. Null if failed to pack
      *         for some reason
@@ -111,7 +111,7 @@ public class RPCResultPacket {
             byte[] payload = new byte[packet.length - HEADER_SIZE];
             int bytesRead = in.read(payload, 0, payload.length);
 
-            if (bytesRead != payload.length) {
+            if (bytesRead != payload.length && bytesRead != -1) {
                 return null;
             }
 
@@ -125,7 +125,7 @@ public class RPCResultPacket {
     }
 
     /**
-     * String representation of a RIOPacket
+     * String representation of a RPCResultPacket
      */
     public String toString() {
         return "rpc-status: " + status + " rpc-result: "

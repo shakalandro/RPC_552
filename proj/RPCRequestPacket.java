@@ -7,10 +7,10 @@ import java.io.IOException;
 import edu.washington.cs.cse490h.lib.Utility;
 
 /**
- * This conveys the header for an RPC packet. This is carried in the payload of
- * a RIOPacket, and in turn the data being transferred is carried in the payload
- * of the RPCPacket packet. (And the RIOPacket is carried as the payload of a
- * Packet, etc).
+ * This conveys the header for an RPC request packet. This is carried in the
+ * payload of a RIOPacket, and in turn the data being transferred is carried in
+ * the payload of the RPCPacket packet. (And the RIOPacket is carried as the
+ * payload of a Packet, etc).
  */
 public class RPCRequestPacket {
 
@@ -43,7 +43,7 @@ public class RPCRequestPacket {
      * @return The server session id
      */
     public int serverSessionID() {
-        return this.serverSessionID();
+        return this.serverSessionID;
     }
 
     /**
@@ -75,7 +75,7 @@ public class RPCRequestPacket {
     }
 
     /**
-     * Convert the RPCPacket packet object into a byte array for sending over
+     * Convert the RPCRequestPacket object into a byte array for sending over
      * the wire. Format: protocol = 1 byte, payload <= MAX_PAYLOAD_SIZE bytes
      * 
      * @return A byte[] for transporting over the wire. Null if failed to pack
@@ -122,7 +122,7 @@ public class RPCRequestPacket {
             byte[] payload = new byte[packet.length - HEADER_SIZE];
             int bytesRead = in.read(payload, 0, payload.length);
 
-            if (bytesRead != payload.length) {
+            if (bytesRead != payload.length && bytesRead != -1) {
                 return null;
             }
 
@@ -137,7 +137,7 @@ public class RPCRequestPacket {
     }
 
     /**
-     * String representation of a RIOPacket
+     * String representation of a RPCRequestPacket
      */
     public String toString() {
         return "rpc-request:" + this.request + " rpc-server-session-id:"

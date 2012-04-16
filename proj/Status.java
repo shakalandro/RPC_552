@@ -1,5 +1,4 @@
 
-
 public enum Status {
     SUCCESS("00 Success"),
     CRASH("01 Crash"),

@@ -1,7 +1,12 @@
 
-
 import edu.washington.cs.cse490h.lib.Callback;
 
+/**
+ * Class to hold state information for RPC file requests -- used to queue
+ * requests and to store callbacks for eventual replies.
+ * 
+ * @author jennyabrahamson
+ */
 public class RPCRequest {
 
     private Callback success;
