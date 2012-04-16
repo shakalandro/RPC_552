@@ -1,12 +1,16 @@
 import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.io.PrintStream;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.LinkedList;
 import java.util.Queue;
 
+import javax.rmi.CORBA.Util;
+
 import edu.washington.cs.cse490h.lib.Callback;
 import edu.washington.cs.cse490h.lib.PersistentStorageReader;
+import edu.washington.cs.cse490h.lib.PersistentStorageWriter;
 import edu.washington.cs.cse490h.lib.Utility;
 
 public class RPCNode extends RIONode {
@@ -33,6 +37,10 @@ public class RPCNode extends RIONode {
     // TODO: can this ever be requested?
     private int lastReceivedRequestID;
     private RPCResultPacket lastComputedResult;
+    
+    private final int MAX_FILE_SIZE = Math.min(RPCRequestPacket.MAX_PAYLOAD_SIZE,
+			 								   RPCResultPacket.MAX_PAYLOAD_SIZE);
+    private final String TEMP_PUT_FILE = ".temp_put_file";
 
     @Override
     public void start() {
@@ -57,6 +65,30 @@ public class RPCNode extends RIONode {
             // Callback callback = new Callback(method, this, new Object[0]);
 
             session(SERVER);
+        }
+        
+        // Recover from a failed put
+        if (Utility.fileExists(this, TEMP_PUT_FILE)) {
+        	try {
+	        	PersistentStorageReader reader = this.getReader(TEMP_PUT_FILE);
+	        	if (!reader.ready()) {
+	        		PersistentStorageWriter deleter = this.getWriter(TEMP_PUT_FILE, false);
+	        		deleter.delete();
+	        	} else {
+	        		String filename = reader.readLine();
+	        		char[] buf = new char[MAX_FILE_SIZE];
+	        		reader.read(buf);
+	        		PersistentStorageWriter writer = this.getWriter(filename, false);
+	        		writer.write(buf);
+	        		
+	        		// delete temp file
+	        		PersistentStorageWriter deleter = this.getWriter(filename, false);
+	        		deleter.delete();
+	        	}
+        	} catch (IOException e) {
+        		// fail ourselves and try again
+        		fail();
+        	}
         }
     }
 
@@ -145,7 +177,7 @@ public class RPCNode extends RIONode {
     }
 
     public void put(int serverAddr, String filename, String contents) {
-        put(serverAddr, filename, contents);
+        put(serverAddr, filename, contents, null, null);
     }
 
     public void put(int serverAddr, String filename, String contents,
@@ -397,74 +429,175 @@ public class RPCNode extends RIONode {
     // SERVER HANDLERS
     // /////////////////////////////
 
+    /**
+     * Gets and returns the contents of filename.
+     * 
+     * @param filename
+     * @param id
+     * @return NOT_EXIST status if the file does not exist. TOO_LARGE status if the file contents
+     * 		are too big. FAILURE if the get fails in process.
+     */
     private RPCResultPacket get(String filename, int id) {
-        // TODO
-        return new RPCResultPacket(id, Status.SUCCESS,
-                Utility.stringToByteArray("getting: " + filename));
-
+    	if (!Utility.fileExists(this, filename)) {
+        	logError("Node " + this.addr + ": could not get " + filename + ", does not exist.");
+        	return new RPCResultPacket(id, Status.NOT_EXIST,
+        			Utility.stringToByteArray(Status.NOT_EXIST.toString()));
+        }
+    	try {
+	    	PersistentStorageReader getter = this.getReader(filename);
+	    	char[] buf = new char[MAX_FILE_SIZE * 2];
+	    	int size = getter.read(buf);
+	    	if (size > MAX_FILE_SIZE) {
+	    		logError("Node " + this.addr + ": could not get " + filename
+       				 	 + ", file is too large to transmit.");
+	    		return new RPCResultPacket(id, Status.TOO_LARGE,
+	    				Utility.stringToByteArray(Status.TOO_LARGE.toString()));
+	    	} else {
+		        return new RPCResultPacket(id, Status.SUCCESS,
+		                Utility.stringToByteArray(new String(buf)));
+	    	}
+    	} catch (IOException e) {
+    		logError("Node " + this.addr + ": failed to get " + filename
+         			 + " because a system IOException occurred.");
+          	return new RPCResultPacket(id, Status.FAILURE,
+          			Utility.stringToByteArray(e.getMessage()));
+    	}
     }
-
+    
+    /**
+     * Creates a file.
+     * 
+     * @param filename
+     * @param id
+     * @return ALREADY_EXISTS status if the file exists, FAILURE status if the creation fails in process
+     */
     private RPCResultPacket create(String filename, int id) {
-        // TODO
-        return new RPCResultPacket(id, Status.SUCCESS,
-                Utility.stringToByteArray("creating: " + filename));
+    	if (Utility.fileExists(this, filename)) {
+        	logError("Node " + this.addr + ": could not create " + filename + ", already exists.");
+        	return new RPCResultPacket(id, Status.ALREADY_EXISTS,
+        			Utility.stringToByteArray(Status.ALREADY_EXISTS.toString()));
+        }
+    	try {
+	    	PersistentStorageWriter creator = this.getWriter(filename, false);
+	    	creator.close();
+	        return new RPCResultPacket(id, Status.SUCCESS,
+	                Utility.stringToByteArray("creating: " + filename));
+    	} catch (IOException e) {
+    		logError("Node " + this.addr + ": failed to create " + filename
+          			 + " because a system IOException occurred.");
+           	return new RPCResultPacket(id, Status.FAILURE,
+           			Utility.stringToByteArray(e.getMessage()));
+    	}
     }
 
+    /**
+     * Puts contents into the file.
+     * 
+     * @param filename
+     * @param contents
+     * @param id
+     * @return NOT_EXIST status if the file does not exist. FAILURE status if the put fails in process.
+     */
     private RPCResultPacket put(String filename, String contents, int id) {
-        if (!Utility.fileExists(this, filename)) {
-            // TODO: return error 10
-
+    	if (!Utility.fileExists(this, filename)) {
+        	logError("Node " + this.addr + ": could not put " + filename + ", does not exist.");
+        	return new RPCResultPacket(id, Status.NOT_EXIST,
+        			Utility.stringToByteArray(Status.NOT_EXIST.toString()));
         }
         try {
+        	// Get old file contents into string
             PersistentStorageReader reader = getReader(filename);
-        } catch (FileNotFoundException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
+            char[] buf = new char[MAX_FILE_SIZE];
+            reader.read(buf);
+            String oldFileData = new String(buf);
+            
+            // Put old file contents into temp file
+            PersistentStorageWriter writer = this.getWriter(TEMP_PUT_FILE, false);
+            writer.write(filename + "/n" + oldFileData);
+            
+            // Write new contents to file
+            writer = this.getWriter(filename, false);
+            writer.write(contents);
+            
+            // Delete temp file
+            writer = this.getWriter(filename, false);
+            writer.delete();
+            return new RPCResultPacket(id, Status.SUCCESS,
+                    Utility.stringToByteArray("putting to: " + filename));
+        } catch (IOException e) {
+        	logError("Node " + this.addr + ": failed to put " + filename
+         			 + " because a system IOException occurred.");
+          	return new RPCResultPacket(id, Status.FAILURE,
+          			Utility.stringToByteArray(e.getMessage()));
         }
-        // TOOD
-        // 1: String oldFile = read foo.txt
-        // 2: PSWriter temp = getWriter(.temp, false)
-        // 3: temp.write("foo.txt\n" + oldFile)
-        // 4: PSWriter newFile = getWriter(foo.txt, false)
-        // 5: newFile.write(contents)
-        // 6: delete temp
-        //
-        // then on a server restart:
-        //
-        // if .temp exists
-        // PSReader temp = getReader(.temp)
-        // if (!temp.ready())
-        // delete temp
-        // else
-        // filename = temp.readLine()
-        // oldContents = read rest of temp
-        // PSWriter revertFile = getWriter(filename, false)
-        // revertFile.write(oldContents)
-        // delete temp
-        //
-        // so essentially there are 3 cases:
-        // no temp file (state is consistent)
-        // empty temp file, which means that the server failed between lines 2
-        // and 3 (file has not been changed)
-        // temp file with some content, which means that the server failed
-        // between lines 3 and 6 (possibly empty file)
-        //
-        // You should think about why this works for a crash between any two
-        // lines (including crashes within the recovery mechanism)
-        return new RPCResultPacket(id, Status.SUCCESS,
-                Utility.stringToByteArray("putting to: " + filename));
     }
 
+    /**
+     * Appends the contents to the file.
+     * 
+     * @param filename
+     * @param contents
+     * @param id
+     * @return NOT_EXIST status if the file does not exist. TOO_LARGE status if the resulting file
+     * 		would be too large. FAILURE if the append fails in process.
+     */
     private RPCResultPacket append(String filename, String contents, int id) {
-        // TODO
-        return new RPCResultPacket(id, Status.SUCCESS,
-                Utility.stringToByteArray("appending to: " + filename));
+        if (!Utility.fileExists(this, filename)) {
+        	logError("Node " + this.addr + ": could not append to " + filename + ", does not exist.");
+        	return new RPCResultPacket(id, Status.NOT_EXIST,
+        			Utility.stringToByteArray(Status.NOT_EXIST.toString()));
+        }
+        try {
+        	PersistentStorageReader reader = this.getReader(filename);
+        	char[] dummy_buf = new char[MAX_FILE_SIZE];
+        	
+        	// read can return -1 if the file is empty, make sure we mark size as 0
+        	int size = Math.max(reader.read(dummy_buf), 0);
+        	if (size + contents.length() > MAX_FILE_SIZE) {
+        		int overflow = size + contents.length() - MAX_FILE_SIZE;
+        		logError("Node " + this.addr + ": could not append to " + filename
+        				 + ", contents was " + overflow + " characters too long.");
+        		return new RPCResultPacket(id, Status.TOO_LARGE,
+            			Utility.stringToByteArray(Status.TOO_LARGE.toString()));
+        	} else {
+        		PersistentStorageWriter appender = this.getWriter(filename, true);
+        		appender.append(contents);
+        		return new RPCResultPacket(id, Status.SUCCESS,
+                        Utility.stringToByteArray("appending to: " + filename));
+        	}
+        } catch (IOException e) {
+        	logError("Node " + this.addr + ": failed to delete " + filename
+       			 + " because a system IOException occurred.");
+        	return new RPCResultPacket(id, Status.FAILURE,
+        			Utility.stringToByteArray(e.getMessage()));
+        }
     }
 
+    /**
+     *	Deletes a file from the current node.
+     *
+     *	@param filename The name of the file to delete
+     *  @param id The request id for this rpc call 
+     *  @return NOT_EXIST status if the file does not exist. FAILURE status if the delete
+     *  	fails in process.
+     **/
     private RPCResultPacket delete(String filename, int id) {
-        // TODO
-        return new RPCResultPacket(id, Status.SUCCESS,
-                Utility.stringToByteArray("deleting: " + filename));
+        if (!Utility.fileExists(this, filename)) {
+        	logError("Node " + this.addr + ": " + filename + " does not exist.");
+        	return new RPCResultPacket(id, Status.NOT_EXIST,
+        			Utility.stringToByteArray(Status.NOT_EXIST.toString()));
+        }
+        try {
+        	PersistentStorageWriter deleter = this.getWriter(filename, false);
+        	deleter.delete();
+        	return new RPCResultPacket(id, Status.SUCCESS,
+                    Utility.stringToByteArray("deleting: " + filename));
+        } catch (IOException e) {
+        	logError("Node " + this.addr + ": failed to delete " + filename
+        			 + " because a system IOException occurred.");
+        	return new RPCResultPacket(id, Status.FAILURE,
+        			Utility.stringToByteArray(e.getMessage()));
+        }
     }
 
     // MISC
