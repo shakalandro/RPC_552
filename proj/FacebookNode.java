@@ -32,11 +32,11 @@ public class FacebookNode extends RPCNode {
 	private static final String MESSAGES_PREFIX = ".messages_";
 
 	// Error codes for file RPC methods.
+	private static final Integer CRASH = 1;
 	private static final Integer FILE_NO_EXIST = 10;
 	private static final Integer FILE_EXISTS = 11;
 	private static final Integer TIMEOUT = 20;
 	private static final Integer FILE_TOO_LARGE = 30;
-	private static final Integer CRASH = 40;
 
 	private static final int SERVER_ID = 0;
 
