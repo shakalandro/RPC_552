@@ -12,10 +12,10 @@ import edu.washington.cs.cse490h.lib.Utility;
 
 public class RPCNode extends RIONode {
 	
-	public static double getFailureRate() { return 0; }
-	public static double getRecoveryRate() { return 0; }
-	public static double getDropRate() { return 0; }
-	public static double getDelayRate() { return 0; }
+	// public static double getFailureRate() { return 0; }
+	// public static double getRecoveryRate() { return 0; }
+	// public static double getDropRate() { return 0; }
+	// public static double getDelayRate() { return 0; }
 
     // Session ID -- on start up, Servers initialize this value using the
     // current time. Client invoke an RPC call to fetch this value from the
@@ -506,7 +506,7 @@ public class RPCNode extends RIONode {
                         Utility.stringToByteArray(Status.TOO_LARGE.toString()));
             } else {
                 return new RPCResultPacket(id, Status.SUCCESS,
-                        Utility.stringToByteArray(new String(buf)));
+                        Utility.stringToByteArray(new String(buf, 0, MAX_FILE_SIZE)));
             }
         } catch (IOException e) {
             logError("Node " + this.addr + ": failed to get " + filename
