@@ -315,7 +315,8 @@ public class RPCNode extends RIONode {
         // ID request
         RPCRequest request = requestQueue.peek();
 
-        if (pkt.getRequestID() != request.getPacket().getRequestID()) {
+        if (request == null
+                || pkt.getRequestID() != request.getPacket().getRequestID()) {
             // This reply is not for the current request, let's ignore it
             return;
         }
