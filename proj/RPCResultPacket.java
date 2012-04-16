@@ -22,11 +22,17 @@ public class RPCResultPacket {
     private Status status;
     private byte[] payload;
 
-    public RPCResultPacket(int requestID, Status status, byte[] payload) {
-        if (payload.length > MAX_PAYLOAD_SIZE) {
-            throw new IllegalArgumentException("Invalid RPC payload");
+    public static RPCResultPacket getPacket(RPCNode node, int ID,
+            Status resultStatus, byte[] resultPayload) {
+        if (resultPayload.length > MAX_PAYLOAD_SIZE) {
+            System.err.println("Invalid payload size in RPCResultPacket");
+            node.fail();
+            return null;
         }
+        return new RPCResultPacket(ID, resultStatus, resultPayload);
+    }
 
+    private RPCResultPacket(int requestID, Status status, byte[] payload) {
         this.requestID = requestID;
         this.status = status;
         this.payload = payload;
