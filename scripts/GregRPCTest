@@ -1,0 +1,14 @@
+start 0
+start 1
+time
+0 begin
+time
+1 begin
+time
+1 create 0 tester
+time
+1 put 0 tester hello
+time
+1 append 0 tester cheerio
+time
+1 get 0 tester
