@@ -1,0 +1,18 @@
+start 0
+start 1
+start 2
+time
+1 create royman
+2 create stinkypete
+time
+1 login royman
+2 login stinkypete
+time
+1 friend stinkypete
+time
+2 accept royman
+time
+1 post hey pete
+time
+2 read
+1 mypals
