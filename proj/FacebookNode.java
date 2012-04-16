@@ -10,9 +10,9 @@ import java.lang.reflect.*;
 import edu.washington.cs.cse490h.lib.Callback;
 
 public class FacebookNode extends RPCNode {
-	public static double getFailureRate() { return 1/100.0; }
-	public static double getDropRate() { return 25/100.0; }
-	public static double getDelayRate() { return 50/100.0; }
+	public static double getFailureRate() { return 0; }
+	public static double getDropRate() { return 0; }
+	public static double getDelayRate() { return 0; }
 	
 	// The available facebook commands that can be entered by the user.
 	private static final String CREATE_COMMAND = "create";
@@ -187,7 +187,7 @@ public class FacebookNode extends RPCNode {
 	// Creates a new user on the system. 3 files are written for each user. Posts, friends, and
 	// friend-requests.
 	public void createNewUser(String userName) throws SecurityException, ClassNotFoundException,
-			NoSuchMethodException {
+			NoSuchMethodException, IllegalAccessException, InvocationTargetException {
 		// Create a callback to be called if the user doesn't exist.
 		String[] paramTypes = { "java.lang.Integer", "java.lang.String" };
 		Method createFiles = Callback.getMethod("createPostsFile", this, paramTypes);
@@ -206,7 +206,7 @@ public class FacebookNode extends RPCNode {
 	// Checks to see if userName is already in use. If so, calls the userExistsCallback. Otherwise,
 	// calls the userNoExistsCallback.
 	public void userExists(Integer errorCode, String userName, Callback userExistsCallback,
-			Callback userNoExistsCallback) throws SecurityException, ClassNotFoundException, NoSuchMethodException {
+			Callback userNoExistsCallback) throws SecurityException, ClassNotFoundException, NoSuchMethodException, IllegalAccessException, InvocationTargetException {
 
 		// Create a failure callback that just calls this method again.
 		String[] failParamTypes =
@@ -220,7 +220,7 @@ public class FacebookNode extends RPCNode {
 		// If we failed because the .users file doesn't exist, then we must create it.
 		if (errorCode != null && errorCode.equals(FILE_NO_EXIST)) {
 			Object[] failureParams = tryAgainCallback.getParams();
-			System.out.println("HOT DAMN");
+			System.out.println(".user file doesn't exist. Creating now.");
 			createUsersFile(null, userNoExistsCallback);
 			return;
 		}
@@ -241,8 +241,17 @@ public class FacebookNode extends RPCNode {
 	// Creates the meta .users file if hasn't been created yet. Then calls the
 	// createUsersFilesCallback.
 	public void createUsersFile(Integer errorCode, Callback createUserFilesCallback)
-			throws SecurityException, ClassNotFoundException, NoSuchMethodException {
+			throws SecurityException, ClassNotFoundException, NoSuchMethodException, IllegalAccessException, InvocationTargetException {
 
+		// If we failed because the user's file is already created, just continue
+		// onwards with the createUserFilesCallback.
+		if (errorCode != null && errorCode.equals(FILE_EXISTS)) {
+			createUserFilesCallback.invoke();
+			return;
+		}
+		
+		System.out.println("In the creating users file callback.");
+		
 		// Create a failure callback that just calls this method again.
 		String[] failParamTypes = { "java.lang.Integer", "edu.washington.cs.cse490h.lib.Callback" };
 		Method tryAgain = Callback.getMethod("createUsersFile", this, failParamTypes);
@@ -270,6 +279,8 @@ public class FacebookNode extends RPCNode {
 		if (errorCode != null && errorCode.equals(FILE_EXISTS)) {
 			createFriendsFile(null, userName);
 		}
+		
+		System.out.println("Now creating the posts file.");
 
 		// Create a failure callback that just tries this method once-more.
 		String[] failParamTypes = { "java.lang.Integer", "java.lang.String" };
@@ -375,7 +386,7 @@ public class FacebookNode extends RPCNode {
 	// ------------------------ USER LOGIN --------------------------------------//
 
 	public void loginUser(String userName) throws SecurityException, ClassNotFoundException,
-			NoSuchMethodException {
+			NoSuchMethodException, IllegalAccessException, InvocationTargetException {
 		// If already logged in.
 		if (loggedInUser != null) {
 			System.out.println("Sorry. Already logged-in as " + loggedInUser);
@@ -392,7 +403,9 @@ public class FacebookNode extends RPCNode {
 		Method doesExist = Callback.getMethod("setLoggedInUser", this, noExistParamTypes);
 		Callback doesExistCallback = new Callback(doesExist, this, noExistParams);
 
-		userExists(null, userName, doesExistCallback, noExistCallback);
+		// TODO(gregbglw): Confirm that user exists here.
+		//userExists(null, userName, doesExistCallback, noExistCallback);
+		loggedInUser = userName;
 	}
 
 	// Sets the logged in user to the given string.
