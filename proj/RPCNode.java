@@ -462,7 +462,7 @@ public class RPCNode extends RIONode {
                             pkt.getRequestID());
                     break;
                 default:
-                    // TODO: unknown request type, we'll ignore it
+                    logError("Node " + addr + ": received unknown request " + request);
                     return;
                 }
             }
@@ -572,14 +572,17 @@ public class RPCNode extends RIONode {
             PersistentStorageWriter writer = this.getWriter(TEMP_PUT_FILE,
                     false);
             writer.write(filename + "/n" + oldFileData);
+            writer.close();
 
             // Write new contents to file
             writer = this.getWriter(filename, false);
             writer.write(contents);
+            writer.close();
 
             // Delete temp file
             writer = this.getWriter(TEMP_PUT_FILE, false);
             writer.delete();
+            writer.close();
             return new RPCResultPacket(id, Status.SUCCESS,
                     Utility.stringToByteArray("putting to: " + filename));
         } catch (IOException e) {
@@ -625,6 +628,7 @@ public class RPCNode extends RIONode {
                 PersistentStorageWriter appender = this.getWriter(filename,
                         true);
                 appender.append(contents);
+                appender.close();
                 return new RPCResultPacket(id, Status.SUCCESS,
                         Utility.stringToByteArray("appending to: " + filename));
             }
@@ -655,6 +659,7 @@ public class RPCNode extends RIONode {
         try {
             PersistentStorageWriter deleter = this.getWriter(filename, false);
             deleter.delete();
+            deleter.close();
             return new RPCResultPacket(id, Status.SUCCESS,
                     Utility.stringToByteArray("deleting: " + filename));
         } catch (IOException e) {
