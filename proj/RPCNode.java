@@ -12,10 +12,10 @@ import edu.washington.cs.cse490h.lib.Utility;
 
 public class RPCNode extends RIONode {
 	
-	public static double getFailureRate() { return 0; }
-	public static double getRecoveryRate() { return 0; }
-	public static double getDropRate() { return 0; }
-	public static double getDelayRate() { return 0; }
+	public static double getFailureRate() { return 1/10000.0; }
+	public static double getRecoveryRate() { return 90/100.0; }
+	public static double getDropRate() { return 10/100.0; }
+	public static double getDelayRate() { return 20/100.0; }
 
     // Session ID -- on start up, Servers initialize this value using the
     // current time. Client invoke an RPC call to fetch this value from the
@@ -30,7 +30,7 @@ public class RPCNode extends RIONode {
     private Queue<RPCRequest> requestQueue;
 
     // Number of steps to wait before re-sending requests
-    public static final int TIMEOUT_INTERVAL = 5;
+    public static final int TIMEOUT_INTERVAL = 6;
 
     // Static assignment of the "server" node -- whichever node has id 0
     private static final int SERVER = 0;
