@@ -14,7 +14,7 @@ import java.io.InputStream;
  */
 public class Packet {
 	public static final int HEADER_SIZE = 8;
-	public static final int MAX_PACKET_SIZE = java.lang.Integer.MAX_VALUE;  // bytes
+	public static final int MAX_PACKET_SIZE = 2000000;  // bytes
 	public static final int MAX_PAYLOAD_SIZE = MAX_PACKET_SIZE - HEADER_SIZE;  // bytes
 
 	private int dest;
