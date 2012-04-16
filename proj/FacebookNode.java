@@ -31,6 +31,7 @@ public class FacebookNode extends RIONode {
 	private static final Integer FILE_NO_EXIST = 10;
 	private static final Integer FILE_EXISTS = 11;
 	private static final Integer TIMEOUT = 20;
+	private static final Integer FILE_TOO_LARGE = 30;
 	private static final Integer CRASH = 40;
 
 	private static final String SERVER_ID = "5";
@@ -329,6 +330,14 @@ public class FacebookNode extends RIONode {
 	// Adds the given user name to the secret list of all user names.
 	private void addUserToList(Integer errorCode, String userName) throws SecurityException,
 			ClassNotFoundException, NoSuchMethodException {
+		
+		// If we're getting back an error code indicating that the user list is too big, let the client know
+		if (errorCode != null && errorCode.equals(FILE_TOO_LARGE)) {
+			System.out.println("Sorry, the system can't handle any more users. " +
+					"You're out of luck, friend.");
+			return;
+		}
+		
 		// Create a failure callback that just tries this method once-more.
 		String[] failParamTypes = { "java.lang.Integer", "java.lang.String" };
 		Method tryAgain = Callback.getMethod("addUserToList", this, failParamTypes);
@@ -445,7 +454,11 @@ public class FacebookNode extends RIONode {
 	// Adds the name of the currently logged-in user to the requests file for the user specified
 	// by userName.
 	private void addToRequestsFile(Integer errorCode, String userName) {
-
+		if (errorCode != null && errorCode.equals(FILE_TOO_LARGE)) {
+			System.out.println("Sorry, " + userName + " has too many pending friend requests.");
+			return;
+		}
+		
 		// Create a failure callback that just tries this method once-more.
 		String[] failParamTypes = { "java.lang.Integer", "java.lang.String" };
 		Method tryAgain = Callback.getMethod("addToRequestsFile", this, failParamTypes);
@@ -569,6 +582,20 @@ public class FacebookNode extends RIONode {
 			Object[] nextFriendParams = { null, friendList, friendIndex + 1, message };
 			successCallback = new Callback(tryAgain, this, nextFriendParams);
 		}
+		
+		// If the current friend was unable to receive the post b/c they already have too many,
+		// let the user know and move on to the next person.
+		if (errorCode != null && errorCode.equals(FILE_TOO_LARGE)) {
+			System.out.println("Sorry, " + friendList.get(friendIndex) + " has too many messages already.");
+			
+			// If we failed on the last person, invoke the success callback to move on to the completion messsage.
+			// Otherwise, increment the friendIndex so that we can try with the next person.
+			if (friendIndex.equals(friendList.size()-1)) {
+				successCallback.invoke();
+			} else {
+				friendIndex++;
+			}
+		}
 
 		// Format the message so that we append the user's name to the front and add a blank line
 		// after it.
@@ -623,6 +650,13 @@ public class FacebookNode extends RIONode {
 	// Adds the current user to the list of friends for username. In case of success, control passes
 	// on to addToMyFriends.
 	private void addToTheirFriends(Integer errorCode, String username) {
+		
+		// Check to see if appending would make file too large.
+		if (errorCode != null && errorCode.equals(FILE_TOO_LARGE)) {
+			System.out.println("Sorry, but " + username + " has too many friends already.");
+			return;
+		}
+		
 		// Create a callback to try again in the case of failure.
 		String[] failParamTypes = { "java.lang.Integer", "java.lang.String" };
 		Method tryAgain = Callback.getMethod("addToTheirFriends", this, failParamTypes);
@@ -640,6 +674,12 @@ public class FacebookNode extends RIONode {
 
 	// Adds username to list of friends for current user.
 	private void addToMyFriends(Integer errorCode, String username) {
+		// Check to see if appending would make file too large.
+		if (errorCode != null && errorCode.equals(FILE_TOO_LARGE)) {
+			System.out.println("Sorry, but you have too many friends.");
+			return;
+		}
+		
 		// Create a callback to try again in the case of failure.
 		String[] failParamTypes = { "java.lang.Integer", "java.lang.String" };
 		Method tryAgain = Callback.getMethod("addToMyFriends", this, failParamTypes);
