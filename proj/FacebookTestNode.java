@@ -13,7 +13,9 @@ public class FacebookTestNode extends FacebookNode {
 			try {
 				this.createNewUser(USER1);
 				this.createNewUser(USER2);
-				//this.loginUser(USER1);
+
+				this.showUsers();
+				this.loginUser(USER1);
 				
 				this.loggedInUser = USER1;
 				this.requestFriend(USER2);
@@ -21,11 +23,11 @@ public class FacebookTestNode extends FacebookNode {
 			//	this.loginUser(USER2);
 
 				this.loggedInUser = USER2;
+				this.showRequests();
 				this.acceptFriend(USER1);
 				this.postMessage("HI " + USER1 + "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
 				//this.logoutUser();
 				//this.loginUser(USER1);
-
 				this.loggedInUser = USER1;
 				this.readPosts();
 			} catch (Exception e) {
