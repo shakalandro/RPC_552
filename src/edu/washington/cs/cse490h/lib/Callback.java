@@ -41,16 +41,6 @@ public class Callback {
     }
 
     /**
-     * Sets the params to be passed to the method when it is invoked
-     * 
-     * @param params
-     *            The params to be passed to the method when it is invoked
-     */
-    public void setParams(Object[] params) {
-        this.params = params;
-    }
-
-    /**
      * Invokes the callback
      * 
      * @throws IllegalAccessException
@@ -64,7 +54,24 @@ public class Callback {
         method.invoke(obj, params);
     }
 
-    /**
+	/**
+	 * Sets the params to be passed to the method when it is invoked
+	 * 
+	 * @param params
+	 *            The params to be passed to the method when it is invoked
+	 */
+	public void setParams(Object[] params) {
+		this.params = params;
+	}
+	
+	/**
+	 * Gets the params to be passed to the method when it is invoked.
+	 */
+	public Object[] getParams() {
+		return params;
+	}
+
+	/**
      * Helper function to get a Method object which is needed to pass to the
      * constructor of this class
      * 
