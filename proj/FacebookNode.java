@@ -10,6 +10,10 @@ import java.lang.reflect.*;
 import edu.washington.cs.cse490h.lib.Callback;
 
 public class FacebookNode extends RPCNode {
+	public static double getFailureRate() { return 1/100.0; }
+	public static double getDropRate() { return 25/100.0; }
+	public static double getDelayRate() { return 50/100.0; }
+	
 	// The available facebook commands that can be entered by the user.
 	private static final String CREATE_COMMAND = "create";
 	private static final String LOGIN_COMMAND = "login";
