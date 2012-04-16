@@ -137,13 +137,13 @@ public class FacebookNode extends RPCNode {
 				System.err.println("Usage: post message_contents");
 				return;
 			}
+			
+			// Find the message content.
+			int messageStart = command.indexOf(' ');
+			String messageContent = command.substring(messageStart+1);
 
-			StringBuilder messageBuilder = new StringBuilder();
-			while (commandScanner.hasNext()) {
-				messageBuilder.append(commandScanner.next());
-			}
 			try {
-				postMessage(messageBuilder.toString());
+				postMessage(messageContent);
 			} catch (Exception e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
@@ -195,8 +195,10 @@ public class FacebookNode extends RPCNode {
 		Callback userNoExistCallback = new Callback(createFiles, this, params);
 
 		// Create a callback to call if the user already exists.
-		Method showWarning = Callback.getMethod("userAlreadyExists", this, new String[] {});
-		Callback userExistsCallback = new Callback(showWarning, this, params);
+		String[] noParamTypes = {};
+		Object[] noParams = {};
+		Method showWarning = Callback.getMethod("userAlreadyExists", this, noParamTypes);
+		Callback userExistsCallback = new Callback(showWarning, this, noParams);
 
 		// Check to make sure that the user doesn't already exist. Look up a password file by this
 		// name.
@@ -246,6 +248,7 @@ public class FacebookNode extends RPCNode {
 		// If we failed because the user's file is already created, just continue
 		// onwards with the createUserFilesCallback.
 		if (errorCode != null && errorCode.equals(FILE_EXISTS)) {
+			// Calls createPostsFile
 			createUserFilesCallback.invoke();
 			return;
 		}
@@ -278,6 +281,7 @@ public class FacebookNode extends RPCNode {
 		// If so, we can just move on to making the friends file.
 		if (errorCode != null && errorCode.equals(FILE_EXISTS)) {
 			createFriendsFile(null, userName);
+			return;
 		}
 		
 		System.out.println("Now creating the posts file.");
@@ -306,6 +310,7 @@ public class FacebookNode extends RPCNode {
 		// If so, we can just move on to making the requests file.
 		if (errorCode != null && errorCode.equals(FILE_EXISTS)) {
 			createRequestsFile(null, userName);
+			return;
 		}
 
 		// Create a failure callback that just tries this method once-more.
@@ -331,6 +336,7 @@ public class FacebookNode extends RPCNode {
 		// If so, we can just move on to appending the name to the list of existing users.
 		if (errorCode != null && errorCode.equals(FILE_EXISTS)) {
 			addUserToList(null, userName);
+			return;
 		}
 
 		// Create a failure callback that just tries this method once-more.
@@ -404,13 +410,14 @@ public class FacebookNode extends RPCNode {
 		Callback doesExistCallback = new Callback(doesExist, this, noExistParams);
 
 		// TODO(gregbglw): Confirm that user exists here.
-		//userExists(null, userName, doesExistCallback, noExistCallback);
-		loggedInUser = userName;
+		userExists(null, userName, doesExistCallback, noExistCallback);
+		//loggedInUser = userName;
 	}
 
 	// Sets the logged in user to the given string.
 	public void setLoggedInUser(String username) {
 		loggedInUser = username;
+		System.out.println("Have a nice myface+ session, " + username);
 	}
 
 	public void noSuchUserReport(String username) {
@@ -485,6 +492,12 @@ public class FacebookNode extends RPCNode {
 	public void addToRequestsFile(Integer errorCode, String userName) throws SecurityException, ClassNotFoundException, NoSuchMethodException {
 		if (errorCode != null && errorCode.equals(FILE_TOO_LARGE)) {
 			System.out.println("Sorry, " + userName + " has too many pending friend requests.");
+			return;
+		}
+		
+		// If file doesn't exist, then just say that the person doesn't exist and move on.
+		if (errorCode != null && errorCode.equals(FILE_NO_EXIST)) {
+			System.out.println("Sorry, there is no such user named " + userName);
 			return;
 		}
 		
@@ -599,7 +612,7 @@ public class FacebookNode extends RPCNode {
 			String message) throws SecurityException, ClassNotFoundException, NoSuchMethodException, IllegalAccessException, InvocationTargetException {
 		// Create a callback to try again if we fail.
 		String[] failParamTypes =
-				{ "java.lang.Integer", "java.util.List<String>", "java.lang.Integer",
+				{ "java.lang.Integer", "java.util.List", "java.lang.Integer",
 						"java.lang.String" };
 		Method tryAgain = Callback.getMethod("addMessage", this, failParamTypes);
 		Object[] failParams = { null, friendList, friendIndex, message };
@@ -639,6 +652,10 @@ public class FacebookNode extends RPCNode {
 		String filename = MESSAGES_PREFIX + friendList.get(friendIndex);
 		append(SERVER_ID, filename, message, successCallback, tryAgainCallback);
 	}
+	
+	public void messagePostSuccess() {
+		System.out.println("Message posted to all friends!");
+	}
 
 	// ----------------------------------- LIST FRIEND REQUESTS-------------------------------- //
 
@@ -648,7 +665,7 @@ public class FacebookNode extends RPCNode {
 		}
 
 		// First step to posting a message is to get a list of all of this user's friends.
-		String filename = FRIENDS_PREFIX + loggedInUser;
+		String filename = REQUESTS_PREFIX + loggedInUser;
 		showAllOfList(null, filename);
 	}
 
@@ -661,8 +678,7 @@ public class FacebookNode extends RPCNode {
 		}
 
 		// Make a callback to print out a scolding message letting the user know that the person
-		// isn't making
-		// a friend request of them.
+		// isn't making a friend request of them.
 		String[] failParamTypes = { "java.lang.String" };
 		Method failMessage = Callback.getMethod("scoldUser", this, failParamTypes);
 		Object[] failParams = { userName };
@@ -739,7 +755,7 @@ public class FacebookNode extends RPCNode {
 		Callback tryAgainCallback = new Callback(tryAgain, this, failParams);
 
 		// Create a callback to pass control onto removeFromRequestList.
-		String[] goodParamTypes = { "java.lang.String", "java.lang.String" };
+		String[] goodParamTypes = {"java.lang.String", "java.lang.String" };
 		Method continueMethod = Callback.getMethod("removeFromRequestList", this, goodParamTypes);
 		Object[] goodParams = {null, username};
 		Callback continuationCallback = new Callback(continueMethod, this, goodParams);
@@ -748,7 +764,7 @@ public class FacebookNode extends RPCNode {
 		get(SERVER_ID, filename, continuationCallback, tryAgainCallback);
 	}
 
-	public void removeFromRequestList(Integer errorCode, String fileContents, String username) throws SecurityException, ClassNotFoundException, NoSuchMethodException {
+	public void removeFromRequestList(String fileContents, String username) throws SecurityException, ClassNotFoundException, NoSuchMethodException {
 		Set<String> pendingRequests = new HashSet<String>();
 		Scanner friendScanner = new Scanner(fileContents);
 		while (friendScanner.hasNext()) {
@@ -765,15 +781,15 @@ public class FacebookNode extends RPCNode {
 			fixedFriendList.append(listIterator.next() + " ");
 		}
 				
-		// Create a callback to try again in the case of failure.
-		String[] failParamTypes = { "java.lang.Integer", "java.lang.String", "java.lang.String" };
-		Method tryAgain = Callback.getMethod("removeFromRequestList", this, failParamTypes);
-		Object[] failParams = { null, fileContents, username };
+		// Create a callback to try from the requests method in the case of failure.
+		String[] failParamTypes = { "java.lang.Integer", "java.lang.String" };
+		Method tryAgain = Callback.getMethod("getRequestList", this, failParamTypes);
+		Object[] failParams = { null, username };
 		Callback tryAgainCallback = new Callback(tryAgain, this, failParams);
 
 		// Create a callback to pass control onto acceptedFriendSuccess.
 		String[] goodParamTypes = {"java.lang.String"};
-		Method continueMethod = Callback.getMethod("acceptedFriendSuccess", this, failParamTypes);
+		Method continueMethod = Callback.getMethod("acceptedFriendSuccess", this, goodParamTypes);
 		Object[] goodParams = { username };
 		Callback continuationCallback = new Callback(continueMethod, this, goodParams);
 
@@ -851,8 +867,9 @@ public class FacebookNode extends RPCNode {
 		Scanner userScanner = new Scanner(fileContents);
 		while (userScanner.hasNext()) {
 			String nextName = userScanner.next();
-			if (nextName.equals(userName)) {
+			if (userName.equals(nextName)) {
 				userExistsCallback.invoke();
+				return;
 			}
 		}
 

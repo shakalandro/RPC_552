@@ -519,7 +519,7 @@ public class RPCNode extends RIONode {
                         Utility.stringToByteArray(Status.TOO_LARGE.getMsg()));
             }
             return RPCResultPacket.getPacket(this, id, Status.SUCCESS, Utility
-                    .stringToByteArray(new String(buf, 0, MAX_FILE_SIZE)));
+                    .stringToByteArray(new String(buf, 0, Math.max(0, size))));
         } catch (IOException e) {
             logError("Node " + this.addr + ": failed to get " + filename
                     + " because a system IOException occurred.");
