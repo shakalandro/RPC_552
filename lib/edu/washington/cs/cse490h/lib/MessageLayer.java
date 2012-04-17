@@ -25,6 +25,7 @@ import edu.washington.cs.cse490h.lib.Manager.FailureLvl;
  *  -e --emulate=<boolean>                            - Emulate [default false]
  *  -n --nodeClass=<string>                           - Node class to use [default ]
  *  --routerHostname=<string>                         - Router hostname [default localhost]
+ *  -K=<boolean>									  - Suppress most simulator output.
  *  --routerPort=<int>                                - Router port [default -1]
  *  -a --nodeAddr=<int>                               - Node address [default -1]
  *  -t --timestep=<long>                              - Time step, in ms [default 1000]
@@ -71,6 +72,12 @@ public class MessageLayer {
 	@Option(value="-s Simulate", aliases={"-simulate"})
 	public static boolean simulate = false;
 
+	/**
+	 * Whether to suppress most simulator printing to standard output.
+	 */
+	@Option(value="-K Suppress output")
+	public static boolean suppressOutput = false;
+	
 	/**
 	 * Perform emulation
 	 */
@@ -257,9 +264,9 @@ public class MessageLayer {
 
 				try {
 					if(!commandFile.equals("")){
-						manager = new Simulator(nodeImpl, failureLvl, seed, replayOutputFilename, replayInputFilename, commandFile);
+						manager = new Simulator(nodeImpl, failureLvl, seed, replayOutputFilename, replayInputFilename, commandFile, suppressOutput);
 					} else {
-						manager = new Simulator(nodeImpl, failureLvl, seed, replayOutputFilename, replayInputFilename);
+						manager = new Simulator(nodeImpl, failureLvl, seed, replayOutputFilename, replayInputFilename, suppressOutput);
 					}
 				} catch (IllegalArgumentException e) {
 					printError("Illegal arguments given to Simulator. Exception: " + e);
