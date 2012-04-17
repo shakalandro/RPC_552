@@ -9,6 +9,13 @@ import java.lang.reflect.*;
 
 import edu.washington.cs.cse490h.lib.Callback;
 
+/*
+ * This class builds on the RPCNode to provide a set of commands that together represent a 
+ * Facebook-like application.
+ * 
+ * @author: Greg Bigelow
+ * */
+
 public class FacebookNode extends RPCNode {
 	public static double getFailureRate() { return 0; }
 	public static double getDropRate() { return 20/100.0; }
@@ -43,7 +50,10 @@ public class FacebookNode extends RPCNode {
 	private static final String ALL_USERS_FILE = ".users";
 
 	public String loggedInUser = null;
+	
+	public boolean doingWork = false;
 
+	
 	@Override
 	public void onCommand(String command) {
 		// Parse the commands and see if we have any matches to available commands.
@@ -188,6 +198,8 @@ public class FacebookNode extends RPCNode {
 	// friend-requests.
 	public void createNewUser(String userName) throws SecurityException, ClassNotFoundException,
 			NoSuchMethodException, IllegalAccessException, InvocationTargetException {
+		doingWork = true;
+		
 		// Create a callback to be called if the user doesn't exist.
 		String[] paramTypes = { "java.lang.Integer", "java.lang.String" };
 		Method createFiles = Callback.getMethod("createPostsFile", this, paramTypes);
@@ -224,6 +236,7 @@ public class FacebookNode extends RPCNode {
 			Object[] failureParams = tryAgainCallback.getParams();
 			//System.out.println(".user file doesn't exist. Creating now.");
 			createUsersFile(null, userNoExistsCallback);
+			doingWork = false;
 			return;
 		}
 
@@ -250,6 +263,7 @@ public class FacebookNode extends RPCNode {
 		if (errorCode != null && errorCode.equals(FILE_EXISTS)) {
 			// Calls createPostsFile
 			createUserFilesCallback.invoke();
+			doingWork = false;
 			return;
 		}
 				
@@ -266,6 +280,7 @@ public class FacebookNode extends RPCNode {
 	// Called if an attempt was made to create a user that already exists. We just spit out a
 	// warning to the console.
 	public void userAlreadyExists() {
+		doingWork = false;
 		System.out.println("Sorry, a user by that name already exists. Might we suggest "
 				+ "you be more creative?");
 	}
@@ -279,6 +294,7 @@ public class FacebookNode extends RPCNode {
 		// If so, we can just move on to making the friends file.
 		if (errorCode != null && errorCode.equals(FILE_EXISTS)) {
 			createFriendsFile(null, userName);
+			doingWork = false;
 			return;
 		}
 		
@@ -306,6 +322,7 @@ public class FacebookNode extends RPCNode {
 		// If so, we can just move on to making the requests file.
 		if (errorCode != null && errorCode.equals(FILE_EXISTS)) {
 			createRequestsFile(null, userName);
+			doingWork = false;
 			return;
 		}
 
@@ -332,6 +349,7 @@ public class FacebookNode extends RPCNode {
 		// If so, we can just move on to appending the name to the list of existing users.
 		if (errorCode != null && errorCode.equals(FILE_EXISTS)) {
 			addUserToList(null, userName);
+			doingWork = false;
 			return;
 		}
 
@@ -360,6 +378,7 @@ public class FacebookNode extends RPCNode {
 		if (errorCode != null && errorCode.equals(FILE_TOO_LARGE)) {
 			System.out.println("Sorry, the system can't handle any more users. " +
 					"You're out of luck, friend.");
+			doingWork = false;
 			return;
 		}
 		
@@ -382,6 +401,7 @@ public class FacebookNode extends RPCNode {
 
 	// Prints a message confirming success in creating a new user.
 	public void createSuccess(String userName) {
+		doingWork = false;
 		System.out.println("Welcome to myface+, " + userName);
 	}
 
@@ -389,9 +409,11 @@ public class FacebookNode extends RPCNode {
 
 	public void loginUser(String userName) throws SecurityException, ClassNotFoundException,
 			NoSuchMethodException, IllegalAccessException, InvocationTargetException {
+		doingWork = true;
 		// If already logged in.
 		if (loggedInUser != null) {
 			System.out.println("Sorry. Already logged-in as " + loggedInUser);
+			doingWork = false;
 			return;
 		}
 
@@ -405,24 +427,26 @@ public class FacebookNode extends RPCNode {
 		Method doesExist = Callback.getMethod("setLoggedInUser", this, noExistParamTypes);
 		Callback doesExistCallback = new Callback(doesExist, this, noExistParams);
 
-		// TODO(gregbglw): Confirm that user exists here.
 		userExists(null, userName, doesExistCallback, noExistCallback);
 		//loggedInUser = userName;
 	}
 
 	// Sets the logged in user to the given string.
 	public void setLoggedInUser(String username) {
+		doingWork = false;
 		loggedInUser = username;
 		System.out.println("Have a nice myface+ session, " + username);
 	}
 
 	public void noSuchUserReport(String username) {
+		doingWork = false;
 		System.out.println("Bad move, bro. No such user by the name of " + username);
 	}
 
 	// ------------------------- USER LOGOUT ------------------------------//
 
 	public void logoutUser() {
+		doingWork = true;
 		if (loggedInUser == null) {
 			System.out.println("In order to log OUT, young one, you must first log IN.");
 		} else {
@@ -430,12 +454,14 @@ public class FacebookNode extends RPCNode {
 		}
 
 		loggedInUser = null;
+		doingWork = false;
 	}
 
 	// ------------------------- REQUEST FRIENDS --------------------------//
 
 	public void requestFriend(String userName) throws SecurityException, ClassNotFoundException,
 			NoSuchMethodException {
+		doingWork = true;
 		if (!confirmLoggedIn()) {
 			return;
 		}
@@ -457,6 +483,7 @@ public class FacebookNode extends RPCNode {
 	}
 	
 	public void reportAlreadyRequested(String user) {
+		doingWork = false;
 		logOutput("There is already a friend request between you and " + user + " in existence.");
 	}
 
@@ -480,6 +507,7 @@ public class FacebookNode extends RPCNode {
 	}
 
 	public void reportAlreadyFriend(String userName) {
+		doingWork = false;
 		System.out.println(userName + " is already your buddy. BFF's forever!");
 	}
 
@@ -488,12 +516,14 @@ public class FacebookNode extends RPCNode {
 	public void addToRequestsFile(Integer errorCode, String userName) throws SecurityException, ClassNotFoundException, NoSuchMethodException {
 		if (errorCode != null && errorCode.equals(FILE_TOO_LARGE)) {
 			System.out.println("Sorry, " + userName + " has too many pending friend requests.");
+			doingWork = false;
 			return;
 		}
 		
 		// If file doesn't exist, then just say that the person doesn't exist and move on.
 		if (errorCode != null && errorCode.equals(FILE_NO_EXIST)) {
 			System.out.println("Sorry, there is no such user named " + userName);
+			doingWork = false;
 			return;
 		}
 		
@@ -517,6 +547,7 @@ public class FacebookNode extends RPCNode {
 
 	// Show this message when we've succesfully completed a friend request.
 	public void requestSuccess(String userName) {
+		doingWork = false;
 		System.out.println("Proposal for intimate, life-long friendship submitted to " + userName);
 	}
 
@@ -524,8 +555,9 @@ public class FacebookNode extends RPCNode {
 
 	public void readPosts() throws SecurityException, ClassNotFoundException,
 			NoSuchMethodException {
-
+		doingWork = true;
 		if (!confirmLoggedIn()) {
+			doingWork = false;
 			return;
 		}
 
@@ -556,12 +588,15 @@ public class FacebookNode extends RPCNode {
 		while (in.hasNextLine()) {
 			System.out.println(in.nextLine());
 		}
+		doingWork = false;
 	}
 
 	// ------------------------- POST MESSAGE ------------------------------------ //
 
 	public void postMessage(String message) throws SecurityException, ClassNotFoundException, NoSuchMethodException {
+		doingWork = true;
 		if (!confirmLoggedIn()) {
+			doingWork = false;
 			return;
 		}
 
@@ -621,7 +656,7 @@ public class FacebookNode extends RPCNode {
 		}
 		
 		// If this is the last friend in the list, create a callback to print a success message.
-		// Otherwise, print a callback that will do this same method with the next friend in the
+		// Otherwise, create a callback that will do this same method with the next friend in the
 		// list.
 		Callback successCallback;
 		if (friendIndex.equals(friendList.size() - 1)) {
@@ -656,13 +691,16 @@ public class FacebookNode extends RPCNode {
 	}
 	
 	public void messagePostSuccess() {
+		doingWork = false;
 		System.out.println("Message posted to all friends!");
 	}
 
 	// ----------------------------------- LIST FRIEND REQUESTS-------------------------------- //
 
 	public void showRequests() throws SecurityException, ClassNotFoundException, NoSuchMethodException {
+		doingWork = true;
 		if (!confirmLoggedIn()) {
+			doingWork = false;
 			return;
 		}
 
@@ -675,7 +713,9 @@ public class FacebookNode extends RPCNode {
 
 	public void acceptFriend(String userName) throws SecurityException, ClassNotFoundException,
 			NoSuchMethodException {
+		doingWork = true;
 		if (!confirmLoggedIn()) {
+			doingWork = false;
 			return;
 		}
 
@@ -698,6 +738,7 @@ public class FacebookNode extends RPCNode {
 
 	// Prints a message to let user know that can't accept a non-existent friend request.
 	public void scoldUser(String username) {
+		doingWork = false;
 		System.out.println(username + " don't wanna be yo friend.");
 	}
 
@@ -708,6 +749,7 @@ public class FacebookNode extends RPCNode {
 		// Check to see if appending would make file too large.
 		if (errorCode != null && errorCode.equals(FILE_TOO_LARGE)) {
 			System.out.println("Sorry, but " + username + " has too many friends already.");
+			doingWork = false;
 			return;
 		}
 		
@@ -731,6 +773,7 @@ public class FacebookNode extends RPCNode {
 		// Check to see if appending would make file too large.
 		if (errorCode != null && errorCode.equals(FILE_TOO_LARGE)) {
 			System.out.println("Sorry, but you have too many friends.");
+			doingWork = false;
 			return;
 		}
 		
@@ -803,18 +846,22 @@ public class FacebookNode extends RPCNode {
 	}
 	
 	public void acceptedFriendSuccess(String username) {
+		doingWork = false;
 		System.out.println("Happy Day! We've made " + username + " our special friend!");
 	}
 
 	// ----------------------------------- LIST ALL USERS -------------------------------- //
 
 	public void showUsers() throws SecurityException, ClassNotFoundException, NoSuchMethodException {
+		doingWork = true;
 		showAllOfList(null, ALL_USERS_FILE);
 	}
 	
 	// ----------------------------------- LIST ALL FRIENDS --------------------------- //
 	public void showFriends() throws SecurityException, ClassNotFoundException, NoSuchMethodException {
+		doingWork = true;
 		if (!confirmLoggedIn()) {
+			doingWork = false;
 			return;
 		}
 		
@@ -858,6 +905,7 @@ public class FacebookNode extends RPCNode {
 				System.out.println(person);
 			}
 		}
+		doingWork = false;
 	}
 	
 	
