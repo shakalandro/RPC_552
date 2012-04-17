@@ -177,7 +177,7 @@ public class FacebookNode extends RPCNode {
 		}
 
 		else {
-			System.err.println("Unrecognized command. Enter 'myface+ help' for available options.");
+			System.err.println("Unrecognized command.");
 		}
 	}
 
@@ -222,7 +222,7 @@ public class FacebookNode extends RPCNode {
 		// If we failed because the .users file doesn't exist, then we must create it.
 		if (errorCode != null && errorCode.equals(FILE_NO_EXIST)) {
 			Object[] failureParams = tryAgainCallback.getParams();
-			System.out.println(".user file doesn't exist. Creating now.");
+			//System.out.println(".user file doesn't exist. Creating now.");
 			createUsersFile(null, userNoExistsCallback);
 			return;
 		}
@@ -252,9 +252,7 @@ public class FacebookNode extends RPCNode {
 			createUserFilesCallback.invoke();
 			return;
 		}
-		
-		System.out.println("In the creating users file callback.");
-		
+				
 		// Create a failure callback that just calls this method again.
 		String[] failParamTypes = { "java.lang.Integer", "edu.washington.cs.cse490h.lib.Callback" };
 		Method tryAgain = Callback.getMethod("createUsersFile", this, failParamTypes);
@@ -284,8 +282,6 @@ public class FacebookNode extends RPCNode {
 			return;
 		}
 		
-		System.out.println("Now creating the posts file.");
-
 		// Create a failure callback that just tries this method once-more.
 		String[] failParamTypes = { "java.lang.Integer", "java.lang.String" };
 		Method tryAgain = Callback.getMethod("createPostsFile", this, failParamTypes);
@@ -618,6 +614,12 @@ public class FacebookNode extends RPCNode {
 		Object[] failParams = { null, friendList, friendIndex, message };
 		Callback tryAgainCallback = new Callback(tryAgain, this, failParams);
 
+		// Check that you actually have friends. If not, then just say so and get out of here.
+		if (friendList.isEmpty()) {
+			System.out.println("Bummer. You don't have any friends! Might as well not be posting at all.");
+			return;
+		}
+		
 		// If this is the last friend in the list, create a callback to print a success message.
 		// Otherwise, print a callback that will do this same method with the next friend in the
 		// list.

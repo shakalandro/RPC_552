@@ -12,6 +12,9 @@ import edu.washington.cs.cse490h.lib.Utility;
 
 public class RPCNode extends RIONode {
 	
+	// Whether to suppress most printing error messages.
+	public boolean printStuff = true;
+	
     // Session ID -- on start up, Servers initialize this value using the
     // current time. Client invoke an RPC call to fetch this value from the
     // server
@@ -127,14 +130,18 @@ public class RPCNode extends RIONode {
 
         if (protocol == Protocol.RPC_REQUEST_PKT) {
             RPCRequestPacket pkt = RPCRequestPacket.unpack(msg);
-            logOutput("JUST RECEIVED: " + pkt.toString());
+            if (printStuff) {
+            	logOutput("JUST RECEIVED: " + pkt.toString());
+            }
             handleRPCrequest(from, pkt);
         } else if (protocol == Protocol.RPC_RESULT_PKT) {
             RPCResultPacket pkt = RPCResultPacket.unpack(msg);
-            logOutput("JUST RECEIVED: " + pkt.toString());
+            if (printStuff) {
+            	logOutput("JUST RECEIVED: " + pkt.toString());
+            }
             handleRPCresult(from, pkt);
         } else {
-            logError("unknown protocol: " + protocol);
+           // logError("unknown protocol: " + protocol);
             return;
         }
     }
@@ -340,14 +347,18 @@ public class RPCNode extends RIONode {
                 callback = request.getSuccess();
 
                 // Log success message
-                logOutput("Successfully completed: " + requestType
-                        + " on server " + request.getServerAddr()
-                        + " and file " + request.getFilename());
+                if (printStuff) {
+	                logOutput("Successfully completed: " + requestType
+	                        + " on server " + request.getServerAddr()
+	                        + " and file " + request.getFilename());
+                }
 
                 // If GET command result, print contents of file to console
                 if (requestType == Command.GET) {
                     String file = Utility.byteArrayToString(pkt.getPayload());
-                    logOutput(file);
+                    if (printStuff) {
+                    	logOutput(file);
+                    }
                     if (callback != null) {
                         Object[] params = callback.getParams();
                         params[0] = file;
