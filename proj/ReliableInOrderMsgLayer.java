@@ -63,8 +63,8 @@ public class ReliableInOrderMsgLayer {
             if (Utility.fileExists(n, IN_LOG_FILE + from)) {
                 try {
                     PersistentStorageReader r = n.getReader(IN_LOG_FILE + from);
-                    String num = r.readLine();
-                    if (num != null && !num.trim().isEmpty()) {
+                    if (r.ready()) {
+                    	String num = r.readLine();
                         int last_delivered = Integer.parseInt(num.trim());
                         in = new InChannel(last_delivered);
                     }
@@ -88,8 +88,7 @@ public class ReliableInOrderMsgLayer {
         for (RIOPacket p : toBeDelivered) {
             // set the last delivered sequence number
             try {
-                PersistentStorageWriter w = n.getWriter(IN_LOG_FILE + from,
-                        false);
+                PersistentStorageWriter w = n.getWriter(IN_LOG_FILE + from, false);
                 w.write(p.getSeqNum());
             } catch (IOException e) {
                 System.err.println("Node" + n.addr
@@ -112,8 +111,7 @@ public class ReliableInOrderMsgLayer {
         int seqNum = Integer.parseInt(Utility.byteArrayToString(msg));
         if (outConnections.containsKey(from)) {
             try {
-                PersistentStorageWriter w = n.getWriter(OUT_LOG_FILE + from,
-                        false);
+                PersistentStorageWriter w = n.getWriter(OUT_LOG_FILE + from, false);
                 w.write(seqNum);
             } catch (IOException e) {
                 // Should never get here because the file does not exist.
@@ -144,9 +142,8 @@ public class ReliableInOrderMsgLayer {
                 try {
                     PersistentStorageReader r = n.getReader(OUT_LOG_FILE
                             + destAddr);
-                    String num = r.readLine();
-                    if (num != null && !num.trim().isEmpty()) {
-                        System.err.println("num: " + num);
+                    if (r.ready()) {
+                    	String num = r.readLine();
                         int last_acked = Integer.parseInt(num.trim());
                         out = new OutChannel(this, destAddr, last_acked);
                     }
@@ -258,7 +255,7 @@ class InChannel {
  * Representation of an outgoing channel to this node
  */
 class OutChannel {
-    private static final int MAX_SEND_ATTEMPTS = 5;
+    private static final int MAX_SEND_ATTEMPTS = Integer.MAX_VALUE - 1;
 
     private HashMap<Integer, RIOPacket> unACKedPackets;
     private HashMap<Integer, Integer> attempts;
