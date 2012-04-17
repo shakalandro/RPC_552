@@ -45,7 +45,7 @@ public class FacebookNode extends RPCNode {
 	private static final Integer TIMEOUT = 20;
 	private static final Integer FILE_TOO_LARGE = 30;
 
-	private static final int SERVER_ID = 0;
+	public static final int SERVER_ID = 0;
 
 	private static final String ALL_USERS_FILE = ".users";
 
