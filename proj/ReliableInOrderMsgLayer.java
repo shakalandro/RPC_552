@@ -265,7 +265,7 @@ class OutChannel {
     private int lastSeqNumSent;
     private ReliableInOrderMsgLayer parent;
     private int destAddr;
-    
+
     OutChannel(ReliableInOrderMsgLayer parent, int destAddr, int seqNum) {
         this(parent, destAddr);
         this.lastSeqNumSent = seqNum;
@@ -343,18 +343,22 @@ class OutChannel {
      */
     private void resendRIOPacket(RIONode n, int seqNum) {
         try {
-        	if (attempts.containsKey(seqNum) && attempts.get(seqNum) < MAX_SEND_ATTEMPTS) {
-	            Method onTimeoutMethod = Callback.getMethod("onTimeout", parent,
-	                    new String[] { "java.lang.Integer", "java.lang.Integer" });
-	            RIOPacket riopkt = unACKedPackets.get(seqNum);
-	
-	            n.send(destAddr, Protocol.DATA, riopkt.pack());
-	            n.addTimeout(new Callback(onTimeoutMethod, parent, new Object[] {
-	                    destAddr, seqNum }), ReliableInOrderMsgLayer.TIMEOUT);
-        	} else {
-        		System.err.println("Node " + n.addr + ": Reached max send attempts for packet " + seqNum);
-        		attempts.remove(seqNum);
-        	}
+            if (attempts.containsKey(seqNum)
+                    && attempts.get(seqNum) < MAX_SEND_ATTEMPTS) {
+                Method onTimeoutMethod = Callback.getMethod("onTimeout",
+                        parent, new String[] { "java.lang.Integer",
+                                "java.lang.Integer" });
+                RIOPacket riopkt = unACKedPackets.get(seqNum);
+
+                n.send(destAddr, Protocol.DATA, riopkt.pack());
+                n.addTimeout(new Callback(onTimeoutMethod, parent,
+                        new Object[] { destAddr, seqNum }),
+                        ReliableInOrderMsgLayer.TIMEOUT);
+            } else {
+                System.err.println("Node " + n.addr
+                        + ": Reached max send attempts for packet " + seqNum);
+                attempts.remove(seqNum);
+            }
         } catch (Exception e) {
             e.printStackTrace();
         }

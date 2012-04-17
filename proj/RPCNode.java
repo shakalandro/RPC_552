@@ -17,11 +17,16 @@ public class RPCNode extends RIONode {
     }
 
     public static double getRecoveryRate() {
-        return 75 / 100.0;
+        return 0 / 100.0;
     }
 
-    // public static double getDropRate() { return 0; }
-    // public static double getDelayRate() { return 0; }
+    public static double getDropRate() {
+        return 0 / 100.0;
+    }
+
+    public static double getDelayRate() {
+        return 0 / 100.0;
+    }
 
     // Session ID -- on start up, Servers initialize this value using the
     // current time. Client invoke an RPC call to fetch this value from the
