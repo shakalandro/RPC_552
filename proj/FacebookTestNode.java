@@ -1,18 +1,18 @@
 import edu.washington.cs.cse490h.lib.Callback;
 
 /*
- * This class builds on the RPCNode to provide a set of commands that together represent a 
- * Facebook-like application.
+ * This class allows us to script the facebook node by listening for the end of an rpc call and
+ * then issuing a new request.
  * 
- * @author: Greg Bigelow
+ * @author: Roy McElmurry
  * */
 
 public class FacebookTestNode extends FacebookNode {
 	public static String BEGIN_COMMAND = "begin";
 	public static int SERVER = 0;
 	
-	public static String USER1 = "roy";
-	public static String USER2 = "stinkypete";
+	public static final String USER1 = "roy";
+	public static final String USER2 = "stinkypete";
 	
 	public enum State {
 		START,
@@ -94,7 +94,7 @@ public class FacebookTestNode extends FacebookNode {
 			} catch (Exception e) {
 				e.printStackTrace();
 			}
-			state = State.values()[state.ordinal() + 1];
+			state = State.values()[Math.min(state.ordinal() + 1, State.END.ordinal())];
 			logOutput("Changed state to " + state.name());
 		}
 		if (state != State.END) {
