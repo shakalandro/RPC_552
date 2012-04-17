@@ -17,9 +17,6 @@ import edu.washington.cs.cse490h.lib.Utility;
  */
 public class ReliableInOrderMsgLayer {
     public static int TIMEOUT = 3;
-    
-    public static String OUT_LOG_FILE = ".rio_out_log";
-    public static String OUT_TEMP_LOG_FILE = OUT_LOG_FILE + "_TEMP";
 
     private HashMap<Integer, InChannel> inConnections;
     private HashMap<Integer, OutChannel> outConnections;
@@ -60,45 +57,14 @@ public class ReliableInOrderMsgLayer {
 
         InChannel in = inConnections.get(from);
         if (in == null) {
-            in = new InChannel();
-            // Set the reciever last delivered sequence number if one exists
-            if (Utility.fileExists(n, IN_LOG_FILE + from)) {
-                try {
-                    PersistentStorageReader r = n.getReader(IN_LOG_FILE + from);
-                    if (r.ready()) {
-                    	String num = r.readLine();
-                    	if (!num.trim().isEmpty()) {
-                    		int last_delivered = Integer.parseInt(num.trim());
-                        	in = new InChannel(last_delivered);
-                    	}
-                    }
-                } catch (IOException e) {
-                    // We should never get here
-                    System.err.println("Node" + n.addr
-                            + ": Could not read log file (" + IN_LOG_FILE
-                            + from + "), but it should exist");
-                } catch (NumberFormatException e) {
-                    // Reaching this means we failed to write to the log
-                    System.err.println("Node" + n.addr
-                            + ": Could not parse sequence number ("
-                            + IN_LOG_FILE + from + ")");
-                    e.printStackTrace();
-                }
-            }
+            in = new InChannel(n, from);
             inConnections.put(from, in);
         }
 
         LinkedList<RIOPacket> toBeDelivered = in.gotPacket(riopkt);
         for (RIOPacket p : toBeDelivered) {
             // set the last delivered sequence number
-            try {
-                PersistentStorageWriter w = n.getWriter(IN_LOG_FILE + from, false);
-                w.write(p.getSeqNum());
-            } catch (IOException e) {
-                System.err.println("Node" + n.addr
-                        + ": Could not write log file (" + IN_LOG_FILE + from
-                        + ") packet");
-            }
+            in.logSequenceNumber(p.getSeqNum());
             n.onRIOReceive(from, p.getProtocol(), p.getPayload());
         }
     }
@@ -114,16 +80,9 @@ public class ReliableInOrderMsgLayer {
     public void RIOAckReceive(int from, byte[] msg) {
         int seqNum = Integer.parseInt(Utility.byteArrayToString(msg));
         if (outConnections.containsKey(from)) {
-            try {
-                PersistentStorageWriter w = n.getWriter(OUT_LOG_FILE + from, false);
-                w.write(seqNum);
-            } catch (IOException e) {
-                // Should never get here because the file does not exist.
-                System.err.println("Node" + n.addr
-                        + ": Could not write log file (" + OUT_LOG_FILE + from
-                        + ") packet");
-            }
-            outConnections.get(from).gotACK(seqNum);
+            OutChannel out = outConnections.get(from);
+            out.logSequenceNumber(seqNum);
+            out.gotACK(seqNum);
         }
     }
 
@@ -141,29 +100,7 @@ public class ReliableInOrderMsgLayer {
     public void RIOSend(int destAddr, int protocol, byte[] payload) {
         OutChannel out = outConnections.get(destAddr);
         if (out == null) {
-            out = new OutChannel(this, destAddr);
-            if (Utility.fileExists(n, OUT_LOG_FILE + destAddr)) {
-                try {
-                    PersistentStorageReader r = n.getReader(OUT_LOG_FILE
-                            + destAddr);
-                    if (r.ready()) {
-                    	String num = r.readLine();
-                    	if (!num.trim().isEmpty()) {
-                    		int last_acked = Integer.parseInt(num.trim());
-                        	out = new OutChannel(this, destAddr, last_acked);
-                    	}
-                    }
-                } catch (IOException e) {
-                    // We should never get here
-                    System.err.println("Node " + n.addr
-                            + ": Could not read log file (" + OUT_LOG_FILE
-                            + destAddr + "), but it should exist");
-                } catch (NumberFormatException e) {
-                    System.err.println("Node" + n.addr
-                            + ": Could not parse sequence number ("
-                            + OUT_LOG_FILE + destAddr + ")");
-                }
-            }
+            out = new OutChannel(this, n, destAddr);
             outConnections.put(destAddr, out);
         }
 
@@ -194,36 +131,17 @@ public class ReliableInOrderMsgLayer {
     }
 }
 
-/**
- * Representation of an incoming channel to this node
- */
-class InChannel {
-	public static String IN_LOG_FILE = ".rio_in_log";
-    public static String IN_TEMP_LOG_FILE = IN_LOG_FILE + "_TEMP";
-    
-    private int lastSeqNumDelivered;
-    private HashMap<Integer, RIOPacket> outOfOrderMsgs;
-    private RIONode n;
-    
-    public String log_file;
-    public String temp_log_file;
-
-    InChannel(RIONode n, int seqNum, int sender_addr) {
-        this(n, sender_addr);
-        lastSeqNumDelivered = seqNum - 1;
-    }
-
-    InChannel(RIONode n, int sender_addr) {
-        outOfOrderMsgs = new HashMap<Integer, RIOPacket>();
-        this.n = n;
-        this.log_file = IN_LOG_FILE + sender_addr;
-        this.temp_log_file = IN_TEMP_LOG_FILE + sender_addr;
-        setSequenceNumber();
-    }
-    
+abstract class Channel {
+	public String log_file;
+	public String temp_log_file;
+	public RIONode n;
+	
+	public int lastSeqNum;
+	
 	// Recover from a failed log write if necessary else start sequence numbers at 0
     public void setSequenceNumber() {
-    	lastSeqNumDelivered = -1;
+    	lastSeqNum = -1;
+    	// recover log file if necessary
         if (Utility.fileExists(n, temp_log_file)) {
             try {
                 PersistentStorageReader reader = n.getReader(temp_log_file);
@@ -244,8 +162,29 @@ class InChannel {
                 System.err.println("Node " + n.addr + ": failed to recover rio log file " + log_file);
             }
         }
+        // Recover sequence number if necessary
         if (Utility.fileExists(n, log_file)) {
-        	
+            try {
+                PersistentStorageReader r = n.getReader(log_file);
+                if (r.ready()) {
+                	String num = r.readLine();
+                	if (!num.trim().isEmpty()) {
+                		lastSeqNum = Integer.parseInt(num.trim());
+                	}
+                }
+            } catch (IOException e) {
+                // We should never get here
+                System.err.println("Node" + n.addr
+                        + ": Could not read log file (" + log_file
+                        + "), but it should exist");
+                e.printStackTrace();
+            } catch (NumberFormatException e) {
+                // Reaching this means we failed to write to the log
+                System.err.println("Node" + n.addr
+                        + ": Could not parse sequence number ("
+                        + log_file + ")");
+                e.printStackTrace();
+            }
         }
     }
     
@@ -253,19 +192,21 @@ class InChannel {
     public void logSequenceNumber(int seqNum) {
         try {
             // Get old file contents into string
-            PersistentStorageReader reader = n.getReader(log_file);
-
-            char[] buf = new char[RIOPacket.MAX_PACKET_SIZE];
-            reader.read(buf);
-            String oldFileData = new String(buf);
-
-            // Put old file contents into temp file
-            PersistentStorageWriter writer = n.getWriter(temp_log_file, false);
-            writer.write(oldFileData);
-            writer.close();
+        	if (Utility.fileExists(n, log_file)) {
+	            PersistentStorageReader reader = n.getReader(log_file);
+	
+	            char[] buf = new char[RIOPacket.MAX_PACKET_SIZE];
+	            reader.read(buf);
+	            String oldFileData = new String(buf);
+	
+	            // Put old file contents into temp file
+	            PersistentStorageWriter writer = n.getWriter(temp_log_file, false);
+	            writer.write(oldFileData);
+	            writer.close();
+        	}
 
             // Write new contents to file
-            writer = n.getWriter(log_file, false);
+        	PersistentStorageWriter writer = n.getWriter(log_file, false);
             writer.write(seqNum);
             writer.close();
 
@@ -276,7 +217,29 @@ class InChannel {
         } catch (IOException e) {
             System.err.println("Node " + n.addr + ": failed to log sequence number " + seqNum
             		+ " to " + log_file);
+            e.printStackTrace();
         }
+    }
+}
+
+/**
+ * Representation of an incoming channel to this node
+ */
+class InChannel extends Channel {
+	public static String IN_LOG_FILE = ".rio_in_log";
+    public static String IN_TEMP_LOG_FILE = IN_LOG_FILE + "_TEMP";
+    
+    private HashMap<Integer, RIOPacket> outOfOrderMsgs;
+    
+    public String log_file;
+    public String temp_log_file;
+
+    public InChannel(RIONode n, int sender_addr) {
+        outOfOrderMsgs = new HashMap<Integer, RIOPacket>();
+        this.n = n;
+        this.log_file = IN_LOG_FILE + sender_addr;
+        this.temp_log_file = IN_TEMP_LOG_FILE + sender_addr;
+        setSequenceNumber();
     }
 
     /**
@@ -291,12 +254,12 @@ class InChannel {
         LinkedList<RIOPacket> pktsToBeDelivered = new LinkedList<RIOPacket>();
         int seqNum = pkt.getSeqNum();
 
-        if (seqNum == lastSeqNumDelivered + 1) {
+        if (seqNum == lastSeqNum + 1) {
             // We were waiting for this packet
             pktsToBeDelivered.add(pkt);
-            ++lastSeqNumDelivered;
+            ++lastSeqNum;
             deliverSequence(pktsToBeDelivered);
-        } else if (seqNum > lastSeqNumDelivered + 1) {
+        } else if (seqNum > lastSeqNum + 1) {
             // We received a subsequent packet and should store it
             outOfOrderMsgs.put(seqNum, pkt);
         }
@@ -312,15 +275,15 @@ class InChannel {
      *            List to append to
      */
     private void deliverSequence(LinkedList<RIOPacket> pktsToBeDelivered) {
-        while (outOfOrderMsgs.containsKey(lastSeqNumDelivered + 1)) {
-            ++lastSeqNumDelivered;
-            pktsToBeDelivered.add(outOfOrderMsgs.remove(lastSeqNumDelivered));
+        while (outOfOrderMsgs.containsKey(lastSeqNum + 1)) {
+            ++lastSeqNum;
+            pktsToBeDelivered.add(outOfOrderMsgs.remove(lastSeqNum));
         }
     }
 
     @Override
     public String toString() {
-        return "last delivered: " + lastSeqNumDelivered + ", outstanding: "
+        return "last delivered: " + lastSeqNum + ", outstanding: "
                 + outOfOrderMsgs.size();
     }
 }
@@ -328,29 +291,25 @@ class InChannel {
 /**
  * Representation of an outgoing channel to this node
  */
-class OutChannel {
+class OutChannel extends Channel {
+	public static String OUT_LOG_FILE = ".rio_out_log";
+    public static String OUT_TEMP_LOG_FILE = OUT_LOG_FILE + "_TEMP";
     private static final int MAX_SEND_ATTEMPTS = Integer.MAX_VALUE - 1;
 
     private HashMap<Integer, RIOPacket> unACKedPackets;
     private HashMap<Integer, Integer> attempts;
-    private int lastSeqNumSent;
     private ReliableInOrderMsgLayer parent;
     private int destAddr;
-    
-    private RIONode n;
-    
-    OutChannel(ReliableInOrderMsgLayer parent, RIONode n, int destAddr, int seqNum) {
-        this(parent, n, destAddr);
-        this.lastSeqNumSent = seqNum;
-    }
 
-    OutChannel(ReliableInOrderMsgLayer parent, RIONode n, int destAddr) {
-        lastSeqNumSent = -1;
+    public OutChannel(ReliableInOrderMsgLayer parent, RIONode n, int destAddr) {
         unACKedPackets = new HashMap<Integer, RIOPacket>();
         attempts = new HashMap<Integer, Integer>();
         this.parent = parent;
         this.destAddr = destAddr;
         this.n = n;
+        this.log_file = OUT_LOG_FILE + destAddr;
+        this.temp_log_file = OUT_TEMP_LOG_FILE + destAddr;
+        setSequenceNumber();
     }
 
     /**
@@ -367,14 +326,14 @@ class OutChannel {
         try {
             Method onTimeoutMethod = Callback.getMethod("onTimeout", parent,
                     new String[] { "java.lang.Integer", "java.lang.Integer" });
-            RIOPacket newPkt = new RIOPacket(protocol, ++lastSeqNumSent,
+            RIOPacket newPkt = new RIOPacket(protocol, ++lastSeqNum,
                     payload);
-            unACKedPackets.put(lastSeqNumSent, newPkt);
+            unACKedPackets.put(lastSeqNum, newPkt);
 
             n.send(destAddr, Protocol.DATA, newPkt.pack());
             attempts.put(newPkt.getSeqNum(), 1);
             n.addTimeout(new Callback(onTimeoutMethod, parent, new Object[] {
-                    destAddr, lastSeqNumSent }),
+                    destAddr, lastSeqNum }),
                     ReliableInOrderMsgLayer.TIMEOUT);
         } catch (Exception e) {
             e.printStackTrace();
