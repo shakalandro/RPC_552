@@ -19,11 +19,6 @@ import edu.washington.cs.cse490h.lib.Utility;
 
 public class RPCNode extends RIONode {
 	
-	public static double getFailureRate() { return 1/10000.0; }
-	public static double getRecoveryRate() { return 90/100.0; }
-	public static double getDropRate() { return 10/100.0; }
-	public static double getDelayRate() { return 20/100.0; }
-
     // Session ID -- on start up, Servers initialize this value using the
     // current time. Client invoke an RPC call to fetch this value from the
     // server
@@ -528,7 +523,7 @@ public class RPCNode extends RIONode {
                         Utility.stringToByteArray(Status.TOO_LARGE.getMsg()));
             }
             return RPCResultPacket.getPacket(this, id, Status.SUCCESS, Utility
-                    .stringToByteArray(new String(buf, 0, MAX_FILE_SIZE)));
+                    .stringToByteArray(new String(buf, 0, Math.max(0, size))));
         } catch (IOException e) {
             logError("failed to get " + filename
                     + " because a system IOException occurred.");
