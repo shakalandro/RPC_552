@@ -1,3 +1,10 @@
+/*
+ * This class builds on the RPCNode to provide a set of commands that together represent a 
+ * Facebook-like application.
+ * 
+ * @author: Greg Bigelow
+ * */
+
 public class FacebookTestNode extends FacebookNode {
 	public static String BEGIN = "begin";
 	public static int SERVER = 0;

@@ -9,6 +9,13 @@ import java.lang.reflect.*;
 
 import edu.washington.cs.cse490h.lib.Callback;
 
+/*
+ * This class builds on the RPCNode to provide a set of commands that together represent a 
+ * Facebook-like application.
+ * 
+ * @author: Greg Bigelow
+ * */
+
 public class FacebookNode extends RPCNode {
 	public static double getFailureRate() { return 1/100.0; }
 	public static double getDropRate() { return 25/100.0; }
