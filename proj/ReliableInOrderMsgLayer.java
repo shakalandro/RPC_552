@@ -239,9 +239,6 @@ class InChannel extends Channel {
 
     private HashMap<Integer, RIOPacket> outOfOrderMsgs;
 
-    public String log_file;
-    public String temp_log_file;
-
     public InChannel(RIONode n, int sender_addr) {
         outOfOrderMsgs = new HashMap<Integer, RIOPacket>();
         this.n = n;
@@ -259,9 +256,9 @@ class InChannel extends Channel {
      *         of this packet
      */
     public LinkedList<RIOPacket> gotPacket(RIOPacket pkt) {
+
         LinkedList<RIOPacket> pktsToBeDelivered = new LinkedList<RIOPacket>();
         int seqNum = pkt.getSeqNum();
-
         if (seqNum == lastSeqNum + 1) {
             // We were waiting for this packet
             pktsToBeDelivered.add(pkt);
