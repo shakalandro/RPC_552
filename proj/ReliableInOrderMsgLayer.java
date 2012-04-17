@@ -17,8 +17,9 @@ import edu.washington.cs.cse490h.lib.Utility;
  */
 public class ReliableInOrderMsgLayer {
     public static int TIMEOUT = 3;
-    public static String IN_LOG_FILE = ".rio_in_log";
+    
     public static String OUT_LOG_FILE = ".rio_out_log";
+    public static String OUT_TEMP_LOG_FILE = OUT_LOG_FILE + "_TEMP";
 
     private HashMap<Integer, InChannel> inConnections;
     private HashMap<Integer, OutChannel> outConnections;
@@ -38,6 +39,7 @@ public class ReliableInOrderMsgLayer {
         inConnections = new HashMap<Integer, InChannel>();
         outConnections = new HashMap<Integer, OutChannel>();
         this.n = n;
+        
     }
 
     /**
@@ -65,8 +67,10 @@ public class ReliableInOrderMsgLayer {
                     PersistentStorageReader r = n.getReader(IN_LOG_FILE + from);
                     if (r.ready()) {
                     	String num = r.readLine();
-                        int last_delivered = Integer.parseInt(num.trim());
-                        in = new InChannel(last_delivered);
+                    	if (!num.trim().isEmpty()) {
+                    		int last_delivered = Integer.parseInt(num.trim());
+                        	in = new InChannel(last_delivered);
+                    	}
                     }
                 } catch (IOException e) {
                     // We should never get here
@@ -144,8 +148,10 @@ public class ReliableInOrderMsgLayer {
                             + destAddr);
                     if (r.ready()) {
                     	String num = r.readLine();
-                        int last_acked = Integer.parseInt(num.trim());
-                        out = new OutChannel(this, destAddr, last_acked);
+                    	if (!num.trim().isEmpty()) {
+                    		int last_acked = Integer.parseInt(num.trim());
+                        	out = new OutChannel(this, destAddr, last_acked);
+                    	}
                     }
                 } catch (IOException e) {
                     // We should never get here
@@ -192,17 +198,85 @@ public class ReliableInOrderMsgLayer {
  * Representation of an incoming channel to this node
  */
 class InChannel {
+	public static String IN_LOG_FILE = ".rio_in_log";
+    public static String IN_TEMP_LOG_FILE = IN_LOG_FILE + "_TEMP";
+    
     private int lastSeqNumDelivered;
     private HashMap<Integer, RIOPacket> outOfOrderMsgs;
+    private RIONode n;
+    
+    public String log_file;
+    public String temp_log_file;
 
-    InChannel(int seqNum) {
-        this();
+    InChannel(RIONode n, int seqNum, int sender_addr) {
+        this(n, sender_addr);
         lastSeqNumDelivered = seqNum - 1;
     }
 
-    InChannel() {
-        lastSeqNumDelivered = -1;
+    InChannel(RIONode n, int sender_addr) {
         outOfOrderMsgs = new HashMap<Integer, RIOPacket>();
+        this.n = n;
+        this.log_file = IN_LOG_FILE + sender_addr;
+        this.temp_log_file = IN_TEMP_LOG_FILE + sender_addr;
+        setSequenceNumber();
+    }
+    
+	// Recover from a failed log write if necessary else start sequence numbers at 0
+    public void setSequenceNumber() {
+    	lastSeqNumDelivered = -1;
+        if (Utility.fileExists(n, temp_log_file)) {
+            try {
+                PersistentStorageReader reader = n.getReader(temp_log_file);
+                if (!reader.ready()) {
+                    PersistentStorageWriter deleter = n.getWriter(temp_log_file, false);
+                    deleter.delete();
+                } else {
+                    char[] buf = new char[RIOPacket.MAX_PACKET_SIZE];
+                    reader.read(buf);
+                    PersistentStorageWriter writer = n.getWriter(log_file, false);
+                    writer.write(buf);
+
+                    // delete temp file
+                    PersistentStorageWriter deleter = n.getWriter(temp_log_file, false);
+                    deleter.delete();
+                }
+            } catch (IOException e) {
+                System.err.println("Node " + n.addr + ": failed to recover rio log file " + log_file);
+            }
+        }
+        if (Utility.fileExists(n, log_file)) {
+        	
+        }
+    }
+    
+    // Log a sequence number
+    public void logSequenceNumber(int seqNum) {
+        try {
+            // Get old file contents into string
+            PersistentStorageReader reader = n.getReader(log_file);
+
+            char[] buf = new char[RIOPacket.MAX_PACKET_SIZE];
+            reader.read(buf);
+            String oldFileData = new String(buf);
+
+            // Put old file contents into temp file
+            PersistentStorageWriter writer = n.getWriter(temp_log_file, false);
+            writer.write(oldFileData);
+            writer.close();
+
+            // Write new contents to file
+            writer = n.getWriter(log_file, false);
+            writer.write(seqNum);
+            writer.close();
+
+            // Delete temp file
+            writer = n.getWriter(temp_log_file, false);
+            writer.delete();
+            writer.close();
+        } catch (IOException e) {
+            System.err.println("Node " + n.addr + ": failed to log sequence number " + seqNum
+            		+ " to " + log_file);
+        }
     }
 
     /**
@@ -263,17 +337,20 @@ class OutChannel {
     private ReliableInOrderMsgLayer parent;
     private int destAddr;
     
-    OutChannel(ReliableInOrderMsgLayer parent, int destAddr, int seqNum) {
-        this(parent, destAddr);
+    private RIONode n;
+    
+    OutChannel(ReliableInOrderMsgLayer parent, RIONode n, int destAddr, int seqNum) {
+        this(parent, n, destAddr);
         this.lastSeqNumSent = seqNum;
     }
 
-    OutChannel(ReliableInOrderMsgLayer parent, int destAddr) {
+    OutChannel(ReliableInOrderMsgLayer parent, RIONode n, int destAddr) {
         lastSeqNumSent = -1;
         unACKedPackets = new HashMap<Integer, RIOPacket>();
         attempts = new HashMap<Integer, Integer>();
         this.parent = parent;
         this.destAddr = destAddr;
+        this.n = n;
     }
 
     /**
