@@ -433,8 +433,8 @@ public class FacebookNode extends RPCNode {
 
 	// Sets the logged in user to the given string.
 	public void setLoggedInUser(String username) {
-		doingWork = false;
 		loggedInUser = username;
+		doingWork = false;
 		System.out.println("Have a nice myface+ session, " + username);
 	}
 
@@ -463,6 +463,7 @@ public class FacebookNode extends RPCNode {
 			NoSuchMethodException {
 		doingWork = true;
 		if (!confirmLoggedIn()) {
+			doingWork = false;
 			return;
 		}
 
@@ -652,6 +653,7 @@ public class FacebookNode extends RPCNode {
 		// Check that you actually have friends. If not, then just say so and get out of here.
 		if (friendList.isEmpty()) {
 			System.out.println("Bummer. You don't have any friends! Might as well not be posting at all.");
+			doingWork = false;
 			return;
 		}
 		
@@ -745,7 +747,6 @@ public class FacebookNode extends RPCNode {
 	// Adds the current user to the list of friends for username. In case of success, control passes
 	// on to addToMyFriends.
 	public void addToTheirFriends(Integer errorCode, String username) throws SecurityException, ClassNotFoundException, NoSuchMethodException {
-		
 		// Check to see if appending would make file too large.
 		if (errorCode != null && errorCode.equals(FILE_TOO_LARGE)) {
 			System.out.println("Sorry, but " + username + " has too many friends already.");
@@ -907,7 +908,7 @@ public class FacebookNode extends RPCNode {
 		}
 		doingWork = false;
 	}
-	
+
 	
 	// If userName is present in fileContents, then calls the userExistsCallback. Otherwise calls
 	// the userNoExistsCallback.

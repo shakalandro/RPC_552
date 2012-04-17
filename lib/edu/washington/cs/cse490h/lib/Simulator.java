@@ -46,7 +46,7 @@ public class Simulator extends Manager {
 	 * @throws IOException If creating the user input reader fails
 	 */
 	public Simulator(Class<? extends Node> nodeImpl, Long seed, String replayOutputFilename,
-			String replayInputFilename) throws IllegalArgumentException, IOException {
+			String replayInputFilename, boolean suppressOutput) throws IllegalArgumentException, IOException {
 		super(nodeImpl, seed, replayOutputFilename, replayInputFilename);
 
 		setParser(new SimulationCommandsParser());
@@ -58,6 +58,8 @@ public class Simulator extends Manager {
 		vtimes = new HashMap<Integer, VectorTime>();
 		crashedNodes = new HashSet<Integer>();
 
+		cleanOutput = suppressOutput;
+		
 		setTime(0);
 		// NOTE: cannot produce a TIMESTEP event here as the nodes haven't
 		// been created yet and we must associate TIMESTEP events with nodes
@@ -77,12 +79,14 @@ public class Simulator extends Manager {
 	 * @throws IOException If creating the user input reader fails
 	 */
 	public Simulator(Class<? extends Node> nodeImpl, FailureLvl failureGen, Long seed,
-			String replayOutputFilename, String replayInputFilename, String commandFile)
+			String replayOutputFilename, String replayInputFilename, String commandFile, boolean suppressOutput)
 			throws IllegalArgumentException, FileNotFoundException, IOException {
-		this(nodeImpl, seed, replayOutputFilename, replayInputFilename);
+		this(nodeImpl, seed, replayOutputFilename, replayInputFilename, suppressOutput);
 
 		cmdInputType = InputType.FILE;
 		userControl = failureGen;
+		
+		cleanOutput = suppressOutput;
 
 		SimulationCommandsParser commandFileParser = new SimulationCommandsParser();
 		sortedEvents = commandFileParser.parseFile(commandFile);
@@ -100,12 +104,14 @@ public class Simulator extends Manager {
 	 * @throws IOException If creating the user input reader fails
 	 */
 	public Simulator(Class<? extends Node> nodeImpl, FailureLvl failureGen, Long seed,
-			String replayOutputFilename, String replayInputFilename)
+			String replayOutputFilename, String replayInputFilename, boolean suppressOutput)
 			throws IllegalArgumentException, IOException {
-		this(nodeImpl, seed, replayOutputFilename, replayInputFilename);
+		this(nodeImpl, seed, replayOutputFilename, replayInputFilename, suppressOutput);
 
 		cmdInputType = InputType.USER;
 		userControl = failureGen;
+		
+		cleanOutput = suppressOutput;
 	}
 
 	/********** Methods for starting and stopping the simulation **********/
