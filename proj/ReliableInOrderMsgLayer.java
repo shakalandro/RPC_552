@@ -230,9 +230,6 @@ class InChannel extends Channel {
     public static String IN_TEMP_LOG_FILE = IN_LOG_FILE + "_TEMP";
     
     private HashMap<Integer, RIOPacket> outOfOrderMsgs;
-    
-    public String log_file;
-    public String temp_log_file;
 
     public InChannel(RIONode n, int sender_addr) {
         outOfOrderMsgs = new HashMap<Integer, RIOPacket>();
