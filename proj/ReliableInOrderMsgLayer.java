@@ -64,18 +64,18 @@ public class ReliableInOrderMsgLayer {
                 try {
                     PersistentStorageReader r = n.getReader(IN_LOG_FILE + from);
                     if (r.ready()) {
-                    	String num = r.readLine();
+                        String num = r.readLine();
                         int last_delivered = Integer.parseInt(num.trim());
                         in = new InChannel(last_delivered);
                     }
                 } catch (IOException e) {
                     // We should never get here
-                    System.err.println("Node" + n.addr
+                    System.err.println("Node " + n.addr
                             + ": Could not read log file (" + IN_LOG_FILE
                             + from + "), but it should exist");
                 } catch (NumberFormatException e) {
                     // Reaching this means we failed to write to the log
-                    System.err.println("Node" + n.addr
+                    System.err.println("Node " + n.addr
                             + ": Could not parse sequence number ("
                             + IN_LOG_FILE + from + ")");
                     e.printStackTrace();
@@ -88,10 +88,11 @@ public class ReliableInOrderMsgLayer {
         for (RIOPacket p : toBeDelivered) {
             // set the last delivered sequence number
             try {
-                PersistentStorageWriter w = n.getWriter(IN_LOG_FILE + from, false);
+                PersistentStorageWriter w = n.getWriter(IN_LOG_FILE + from,
+                        false);
                 w.write(p.getSeqNum());
             } catch (IOException e) {
-                System.err.println("Node" + n.addr
+                System.err.println("Node " + n.addr
                         + ": Could not write log file (" + IN_LOG_FILE + from
                         + ") packet");
             }
@@ -111,11 +112,12 @@ public class ReliableInOrderMsgLayer {
         int seqNum = Integer.parseInt(Utility.byteArrayToString(msg));
         if (outConnections.containsKey(from)) {
             try {
-                PersistentStorageWriter w = n.getWriter(OUT_LOG_FILE + from, false);
+                PersistentStorageWriter w = n.getWriter(OUT_LOG_FILE + from,
+                        false);
                 w.write(seqNum);
             } catch (IOException e) {
                 // Should never get here because the file does not exist.
-                System.err.println("Node" + n.addr
+                System.err.println("Node " + n.addr
                         + ": Could not write log file (" + OUT_LOG_FILE + from
                         + ") packet");
             }
@@ -143,7 +145,7 @@ public class ReliableInOrderMsgLayer {
                     PersistentStorageReader r = n.getReader(OUT_LOG_FILE
                             + destAddr);
                     if (r.ready()) {
-                    	String num = r.readLine();
+                        String num = r.readLine();
                         int last_acked = Integer.parseInt(num.trim());
                         out = new OutChannel(this, destAddr, last_acked);
                     }
