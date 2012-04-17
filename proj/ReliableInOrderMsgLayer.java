@@ -142,6 +142,7 @@ abstract class Channel {
     // at 0
     public void setSequenceNumber() {
         lastSeqNum = -1;
+        // recover log file if necessary
         if (Utility.fileExists(n, temp_log_file)) {
             try {
                 PersistentStorageReader reader = n.getReader(temp_log_file);
@@ -166,7 +167,7 @@ abstract class Channel {
                         + ": failed to recover rio log file " + log_file);
             }
         }
-        // Recover sequence number
+        // Recover sequence number if necessary
         if (Utility.fileExists(n, log_file)) {
             try {
                 PersistentStorageReader r = n.getReader(log_file);
@@ -196,19 +197,22 @@ abstract class Channel {
     public void logSequenceNumber(int seqNum) {
         try {
             // Get old file contents into string
-            PersistentStorageReader reader = n.getReader(log_file);
+            if (Utility.fileExists(n, log_file)) {
+                PersistentStorageReader reader = n.getReader(log_file);
 
-            char[] buf = new char[RIOPacket.MAX_PACKET_SIZE];
-            reader.read(buf);
-            String oldFileData = new String(buf);
+                char[] buf = new char[RIOPacket.MAX_PACKET_SIZE];
+                reader.read(buf);
+                String oldFileData = new String(buf);
 
-            // Put old file contents into temp file
-            PersistentStorageWriter writer = n.getWriter(temp_log_file, false);
-            writer.write(oldFileData);
-            writer.close();
+                // Put old file contents into temp file
+                PersistentStorageWriter writer = n.getWriter(temp_log_file,
+                        false);
+                writer.write(oldFileData);
+                writer.close();
+            }
 
             // Write new contents to file
-            writer = n.getWriter(log_file, false);
+            PersistentStorageWriter writer = n.getWriter(log_file, false);
             writer.write(seqNum);
             writer.close();
 
@@ -217,9 +221,11 @@ abstract class Channel {
             writer.delete();
             writer.close();
         } catch (IOException e) {
+
             System.err.println("Node " + n.addr
                     + ": failed to log sequence number " + seqNum + " to "
                     + log_file);
+            e.printStackTrace();
         }
     }
 }
@@ -232,7 +238,6 @@ class InChannel extends Channel {
     public static String IN_TEMP_LOG_FILE = IN_LOG_FILE + "_TEMP";
 
     private HashMap<Integer, RIOPacket> outOfOrderMsgs;
-    private RIONode n;
 
     public String log_file;
     public String temp_log_file;
