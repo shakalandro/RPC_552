@@ -8,7 +8,7 @@ import edu.washington.cs.cse490h.lib.Callback;
  * */
 
 public class FacebookTestNode extends FacebookNode {
-	public static String BEGIN = "begin";
+	public static String BEGIN_COMMAND = "begin";
 	public static int SERVER = 0;
 	
 	public static String USER1 = "roy";
@@ -37,7 +37,7 @@ public class FacebookTestNode extends FacebookNode {
 	public void onCommand(String command) {
 		if (addr == SERVER) {
 			logError("You cannot test as the server");
-		} else if (command.equals(BEGIN)) {
+		} else if (command.equals(BEGIN_COMMAND)) {
 			state = State.START;
 			changeState();
 			registerCallback();					
@@ -94,8 +94,9 @@ public class FacebookTestNode extends FacebookNode {
 			} catch (Exception e) {
 				e.printStackTrace();
 			}
+			state = State.values()[state.ordinal() + 1];
+			logOutput("Changed state to " + state.name());
 		}
-		state = State.values()[state.ordinal() + 1];
 		if (state != State.END) {
 			registerCallback();
 		}
