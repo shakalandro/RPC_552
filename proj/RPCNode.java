@@ -20,7 +20,7 @@ import edu.washington.cs.cse490h.lib.Utility;
 public class RPCNode extends RIONode {
 	
 	// Whether to suppress most printing error messages.
-	public boolean printStuff = true;
+	public boolean printStuff = false;
 	
     // Session ID -- on start up, Servers initialize this value using the
     // current time. Client invoke an RPC call to fetch this value from the
