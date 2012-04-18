@@ -325,9 +325,7 @@ public class Simulator extends Manager {
 	protected void checkWriteCrash(Node n, String description) {
 		if (userControl.compareTo(FailureLvl.CRASH) < 0) {
 			if (Utility.getRNG().nextDouble() < failureRate) {
-				if (!cleanOutput) {
-					System.out.println("Randomly failing before write: " + n.addr);
-				}
+				System.out.println("Randomly failing before write: " + n.addr);
 				NodeCrashException e = failNode(n.addr);
 				// This function is called by Node, so we need to rethrow the
 				// exception to fully stop execution
