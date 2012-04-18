@@ -17,8 +17,8 @@ import edu.washington.cs.cse490h.lib.Callback;
  * */
 
 public class FacebookNode extends RPCNode {
-	public static double getFailureRate() { return 0/100.0; }
-	public static double getRecoveryRate() { return 0/100.0; }
+	public static double getFailureRate() { return 1/100.0; }
+	public static double getRecoveryRate() { return 100/100.0; }
 	public static double getDropRate() { return 20/100.0; }
 	public static double getDelayRate() { return 40/100.0; }
 	

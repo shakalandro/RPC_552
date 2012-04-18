@@ -35,9 +35,6 @@ public class RPCNode extends RIONode {
     public static double getDelayRate() {
         return MessageLayer.rpcDelay / 100.0;
     }
-
-    // Whether to suppress most printing error messages.
-    public static boolean printStuff = MessageLayer.rpcLog;
     
 	public static final String COLOR_PURPLE = "1;35";
 	public static final String COLOR_BLUE = "0;34";
@@ -714,20 +711,20 @@ public class RPCNode extends RIONode {
     // //////////
 
     private void logError(String output) {
-    	if (printStuff) {
+    	if (MessageLayer.rpcLog) {
     		log(output, System.err, COLOR_RED);
     	}
     }
 
     private void logOutput(String output) {
-    	if (printStuff) {
+    	if (MessageLayer.rpcLog) {
     		log(output, System.out, COLOR_GREEN);
     	}
     }
 
     public void log(String output, PrintStream stream, String colorCommand) {
     	if (USE_COLORS) {
-    		stream.println((char)27 + "[" + colorCommand + "m" + output + (char)27 + "[m");
+    		stream.println((char)27 + "[" + colorCommand + "m" + "Node " + addr + ": " + output + (char)27 + "[m");
     	} else {
     		stream.println("Node " + addr + ": " + output);
     	}

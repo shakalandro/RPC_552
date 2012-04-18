@@ -46,7 +46,7 @@ public class Simulator extends Manager {
 	 * @throws IOException If creating the user input reader fails
 	 */
 	public Simulator(Class<? extends Node> nodeImpl, Long seed, String replayOutputFilename,
-			String replayInputFilename, boolean suppressOutput) throws IllegalArgumentException, IOException {
+			String replayInputFilename,   boolean suppressOutput) throws IllegalArgumentException, IOException {
 		super(nodeImpl, seed, replayOutputFilename, replayInputFilename);
 
 		setParser(new SimulationCommandsParser());
@@ -325,7 +325,9 @@ public class Simulator extends Manager {
 	protected void checkWriteCrash(Node n, String description) {
 		if (userControl.compareTo(FailureLvl.CRASH) < 0) {
 			if (Utility.getRNG().nextDouble() < failureRate) {
-				System.out.println("Randomly failing before write: " + n.addr);
+				if (!cleanOutput) {
+					System.out.println("Randomly failing before write: " + n.addr);
+				}
 				NodeCrashException e = failNode(n.addr);
 				// This function is called by Node, so we need to rethrow the
 				// exception to fully stop execution
@@ -619,7 +621,7 @@ public class Simulator extends Manager {
 				System.out.println("Executing with order: ");
 			}
 			for (Event ev : currentRoundEvents) {
-				if (!cleanOutput) {
+				if (!cleanOutput || ev.t == Event.EventType.FAILURE || ev.t == Event.EventType.START) {
 					System.out.println(ev.toString());
 				}
 				handleEvent(ev);
