@@ -22,6 +22,8 @@ public class ReliableInOrderMsgLayer {
     private HashMap<Integer, OutChannel> outConnections;
     private RIONode n;
 
+    public static boolean debugging = false;
+
     /**
      * Constructor.
      * 
@@ -141,91 +143,123 @@ abstract class Channel {
     // Recover from a failed log write if necessary else start sequence numbers
     // at 0
     public void setSequenceNumber() {
+        debugPrint("Attempting to assign sequence number");
         lastSeqNum = -1;
-        // recover log file if necessary
-        if (Utility.fileExists(n, temp_log_file)) {
-            try {
-                PersistentStorageReader reader = n.getReader(temp_log_file);
-                if (!reader.ready()) {
-                    PersistentStorageWriter deleter = n.getWriter(
-                            temp_log_file, false);
-                    deleter.delete();
-                } else {
-                    char[] buf = new char[RIOPacket.MAX_PACKET_SIZE];
-                    reader.read(buf);
-                    PersistentStorageWriter writer = n.getWriter(log_file,
-                            false);
-                    writer.write(buf);
 
-                    // delete temp file
-                    PersistentStorageWriter deleter = n.getWriter(
-                            temp_log_file, false);
-                    deleter.delete();
+        // recover temp log file if necessary
+        if (Utility.fileExists(n, temp_log_file)) {
+            debugPrint("Temp file " + temp_log_file + " existed");
+
+            // Fetch value in temp file
+            int oldVal = getSequenceNumFromFile(temp_log_file);
+
+            if (oldVal != -1) {
+                // Write to regular log
+                if (writeCurrentSequence(log_file, oldVal)) {
+                    debugPrint("Successfully wrote old temp seq num: " + oldVal
+                            + " to " + log_file);
                 }
-            } catch (IOException e) {
-                System.err.println("Node " + n.addr
-                        + ": failed to recover rio log file " + log_file);
             }
+            // delete temp file
+            deleteFile(temp_log_file);
         }
-        // Recover sequence number if necessary
+
+        // Recover sequence number from log if necessary
         if (Utility.fileExists(n, log_file)) {
-            try {
-                PersistentStorageReader r = n.getReader(log_file);
-                if (r.ready()) {
-                    String num = r.readLine();
-                    if (!num.trim().isEmpty()) {
-                        lastSeqNum = Integer.parseInt(num.trim());
-                    }
-                }
-            } catch (IOException e) {
-                // We should never get here
-                System.err.println("Node" + n.addr
-                        + ": Could not read log file (" + log_file
-                        + "), but it should exist");
-                e.printStackTrace();
-            } catch (NumberFormatException e) {
-                // Reaching this means we failed to write to the log
-                System.err.println("Node" + n.addr
-                        + ": Could not parse sequence number (" + log_file
-                        + ")");
-                e.printStackTrace();
-            }
+            debugPrint("Log file " + log_file + " existed");
+            lastSeqNum = getSequenceNumFromFile(log_file);
+        } else {
+            debugPrint("Log file " + log_file + " did not exist");
         }
     }
 
     // Log a sequence number
     public void logSequenceNumber(int seqNum) {
-        try {
-            // Get old file contents into string
-            if (Utility.fileExists(n, log_file)) {
-                PersistentStorageReader reader = n.getReader(log_file);
+        debugPrint("Attempting to write seq num: " + seqNum + " to file: "
+                + log_file);
 
-                char[] buf = new char[RIOPacket.MAX_PACKET_SIZE];
-                reader.read(buf);
-                String oldFileData = new String(buf);
+        // Flag for whether we'll need to clean up a temp file
+        boolean createdTemp = false;
+
+        // Fetch old sequence num from log_file if it exists
+        if (Utility.fileExists(n, log_file)) {
+            int oldValue = getSequenceNumFromFile(log_file);
+            if (oldValue != -1) {
+                debugPrint("Successfully read old seq num: " + oldValue
+                        + " from " + log_file);
 
                 // Put old file contents into temp file
-                PersistentStorageWriter writer = n.getWriter(temp_log_file,
-                        false);
-                writer.write(oldFileData);
-                writer.close();
+                if (writeCurrentSequence(temp_log_file, oldValue)) {
+                    debugPrint("Successfully wrote seq num: " + seqNum + " to "
+                            + temp_log_file);
+                    createdTemp = true;
+                }
             }
+        }
 
-            // Write new contents to file
-            PersistentStorageWriter writer = n.getWriter(log_file, false);
-            writer.write(seqNum);
+        // Write new sequence number to log file
+        if (writeCurrentSequence(log_file, seqNum)) {
+            debugPrint("Successfully wrote seq num: " + seqNum + " to "
+                    + log_file);
+        }
+
+        // Delete temp file if necessary
+        if (createdTemp) {
+            deleteFile(temp_log_file);
+        }
+    }
+
+    private int getSequenceNumFromFile(String filename) {
+        try {
+            PersistentStorageReader reader = n.getReader(filename);
+            if (reader.ready()) {
+                int num = Integer.parseInt(reader.readLine().trim());
+                reader.close();
+                return num;
+            }
+            reader.close();
+        } catch (IOException e) {
+            // We should never get here
+            debugPrint("Could not read log file (" + filename
+                    + "), but it should exist");
+            e.printStackTrace();
+        } catch (NumberFormatException e) {
+            // Reaching this means we failed to write to the log
+            debugPrint("Could not parse sequence number (" + filename + ")");
+            e.printStackTrace();
+        }
+        return -1;
+    }
+
+    private boolean writeCurrentSequence(String filename, int sequence) {
+        // Write new contents to file
+        try {
+            PersistentStorageWriter writer = n.getWriter(filename, false);
+            writer.write("" + sequence);
             writer.close();
+            return true;
+        } catch (IOException e) {
+            debugPrint("Failed to log sequence number " + sequence + " to "
+                    + filename);
+            e.printStackTrace();
+        }
+        return false;
+    }
 
-            // Delete temp file
-            writer = n.getWriter(temp_log_file, false);
+    private void deleteFile(String filename) {
+        try {
+            PersistentStorageWriter writer = n.getWriter(filename, false);
             writer.delete();
             writer.close();
         } catch (IOException e) {
-
-            System.err.println("Node " + n.addr
-                    + ": failed to log sequence number " + seqNum + " to "
-                    + log_file);
+            debugPrint("Failed to delete file " + filename);
             e.printStackTrace();
+        }
+    }
+
+    private void debugPrint(String msg) {
+        if (ReliableInOrderMsgLayer.debugging) {
+            System.out.println("Node " + n.addr + ": " + msg);
         }
     }
 }
@@ -259,6 +293,7 @@ class InChannel extends Channel {
 
         LinkedList<RIOPacket> pktsToBeDelivered = new LinkedList<RIOPacket>();
         int seqNum = pkt.getSeqNum();
+
         if (seqNum == lastSeqNum + 1) {
             // We were waiting for this packet
             pktsToBeDelivered.add(pkt);
