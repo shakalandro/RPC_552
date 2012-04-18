@@ -8,13 +8,17 @@ import edu.washington.cs.cse490h.lib.Callback;
  * */
 
 public class FacebookTestNode extends FacebookNode {
+	public static double getFailureRate() { return 1/100.0; }
+	public static double getDropRate() { return 20/100.0; }
+	public static double getDelayRate() { return 40/100.0; }
+	
 	public static String BEGIN_COMMAND = "begin";
 	public static int SERVER = 0;
 	
 	public static final String USER1 = "roy";
 	public static final String USER2 = "stinkypete";
 	
-	public enum State {
+	public static enum State {
 		START,
 		CREATE1,
 		CREATE2,
@@ -31,16 +35,24 @@ public class FacebookTestNode extends FacebookNode {
 		END;
 	}
 	
-	private State state;
+	private static State state = State.START;
+	private boolean justBooted = true;
+	
+	
+	@Override
+	public void start() {
+		super.start();
+		if (addr != SERVER) {
+			onCommand(BEGIN_COMMAND);
+		}
+	}
 	
 	@Override
 	public void onCommand(String command) {
 		if (addr == SERVER) {
 			logError("You cannot test as the server");
 		} else if (command.equals(BEGIN_COMMAND)) {
-			state = State.START;
 			changeState();
-			registerCallback();					
 		}
 	}
 	
@@ -61,7 +73,7 @@ public class FacebookTestNode extends FacebookNode {
 	public void changeState() {
 		if (!doingWork) {
 			try {
-				switch (state) {
+				switch (FacebookTestNode.state) {
 					case START:
 						this.createNewUser(USER1); break;
 					case CREATE1:
@@ -94,8 +106,11 @@ public class FacebookTestNode extends FacebookNode {
 			} catch (Exception e) {
 				e.printStackTrace();
 			}
-			state = State.values()[Math.min(state.ordinal() + 1, State.END.ordinal())];
-			logOutput("Changed state to " + state.name());
+			if (!justBooted) {
+				FacebookTestNode.state = State.values()[Math.min(state.ordinal() + 1, State.END.ordinal())];
+			}
+			justBooted = false;
+			logOutput("Changed state to " + FacebookTestNode.state.name());
 		}
 		if (state != State.END) {
 			registerCallback();

@@ -152,6 +152,6 @@ public class RPCRequestPacket {
     public String toString() {
         return "rpc-request:" + this.request + " rpc-server-session-id:"
                 + this.serverSessionID + " rpc-id: " + this.requestID
-                + " rpc-payload:" + Utility.byteArrayToString(this.payload);
+                + " rpc-payload: " + Utility.byteArrayToString(this.payload);
     }
 }

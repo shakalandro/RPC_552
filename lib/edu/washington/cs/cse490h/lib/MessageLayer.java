@@ -38,6 +38,7 @@ import edu.washington.cs.cse490h.lib.Manager.FailureLvl;
  *  -l --synopticPartiallyOrderedLogFilename=<string> - Synoptic partially ordered log filename [default ]
  *  -o --replayOutputFilename=<string>                - Replay output filename [default ]
  *  --replayInputFilename=<string>                    - Replay input filename [default ]
+ *  -F --runForever									  - Run forever
  *
  * </pre>   
  */
@@ -161,7 +162,9 @@ public class MessageLayer {
 	public static String replayInputFilename = "";
 	// end option group "Debugging Options"
 
-
+	@Option(value="-F Run Manager forever", aliases={"-runForever"})
+	public static boolean runForever = false;
+	
 	/** One line synopsis of usage */
 	private static String usage_string
 	= "java MessageLayer [options]";
