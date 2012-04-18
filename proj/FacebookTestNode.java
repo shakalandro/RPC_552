@@ -36,7 +36,7 @@ public class FacebookTestNode extends FacebookNode {
 	@Override
 	public void onCommand(String command) {
 		if (addr == SERVER) {
-			logError("You cannot test as the server");
+			printError("You cannot test as the server");
 		} else if (command.equals(BEGIN_COMMAND)) {
 			state = State.START;
 			changeState();
@@ -95,7 +95,7 @@ public class FacebookTestNode extends FacebookNode {
 				e.printStackTrace();
 			}
 			state = State.values()[Math.min(state.ordinal() + 1, State.END.ordinal())];
-			logOutput("Changed state to " + state.name());
+			printOutput("Changed state to " + state.name());
 		}
 		if (state != State.END) {
 			registerCallback();

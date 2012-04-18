@@ -19,7 +19,7 @@ import edu.washington.cs.cse490h.lib.Utility;
  * @author Jenny Abrahamson
  */
 public class RPCNode extends RIONode {
-
+	 
     public static double getFailureRate() {
         return MessageLayer.rpcFail / 100.0;
     }
@@ -37,7 +37,15 @@ public class RPCNode extends RIONode {
     }
 
     // Whether to suppress most printing error messages.
-    public boolean printStuff = true;
+    public static boolean printStuff = MessageLayer.rpcLog;
+    
+	public static final String COLOR_PURPLE = "1;35";
+	public static final String COLOR_BLUE = "0;34";
+	public static final String COLOR_RED = "0;31";
+	public static final String COLOR_CYAN = "0;36";
+	public static final String COLOR_GREEN = "0;32";
+ 
+	public static final boolean USE_COLORS = true;
 
     // Session ID -- on start up, Servers initialize this value using the
     // current time. Client invoke an RPC call to fetch this value from the
@@ -156,15 +164,11 @@ public class RPCNode extends RIONode {
 
         if (protocol == Protocol.RPC_REQUEST_PKT) {
             RPCRequestPacket pkt = RPCRequestPacket.unpack(msg);
-            if (printStuff) {
-                logOutput("JUST RECEIVED: " + pkt.toString());
-            }
+            logOutput("JUST RECEIVED: " + pkt.toString());
             handleRPCrequest(from, pkt);
         } else if (protocol == Protocol.RPC_RESULT_PKT) {
             RPCResultPacket pkt = RPCResultPacket.unpack(msg);
-            if (printStuff) {
-                logOutput("JUST RECEIVED: " + pkt.toString());
-            }
+            logOutput("JUST RECEIVED: " + pkt.toString());
             handleRPCresult(from, pkt);
         } else {
             // logError("unknown protocol: " + protocol);
@@ -373,18 +377,15 @@ public class RPCNode extends RIONode {
                 callback = request.getSuccess();
 
                 // Log success message
-                if (printStuff) {
-                    logOutput("Successfully completed: " + requestType
-                            + " on server " + request.getServerAddr()
-                            + " and file " + request.getFilename());
-                }
+                logOutput("Successfully completed: " + requestType
+                        + " on server " + request.getServerAddr()
+                        + " and file " + request.getFilename());
+                
 
                 // If GET command result, print contents of file to console
                 if (requestType == Command.GET) {
                     String file = Utility.byteArrayToString(pkt.getPayload());
-                    if (printStuff) {
-                        logOutput(file);
-                    }
+                    logOutput(file);
                     if (callback != null) {
                         Object[] params = callback.getParams();
                         params[0] = file;
@@ -535,7 +536,6 @@ public class RPCNode extends RIONode {
      */
     private RPCResultPacket get(String filename, int id) {
         if (!Utility.fileExists(this, filename)) {
-            logError("could not get " + filename + ", does not exist.");
             return RPCResultPacket.getPacket(this, id, Status.NOT_EXIST,
                     Utility.stringToByteArray(Status.NOT_EXIST.getMsg()));
         }
@@ -713,15 +713,23 @@ public class RPCNode extends RIONode {
     // MISC
     // //////////
 
-    public void logError(String output) {
-        log(output, System.err);
+    private void logError(String output) {
+    	if (printStuff) {
+    		log(output, System.err, COLOR_RED);
+    	}
     }
 
-    public void logOutput(String output) {
-        log(output, System.out);
+    private void logOutput(String output) {
+    	if (printStuff) {
+    		log(output, System.out, COLOR_GREEN);
+    	}
     }
 
-    public void log(String output, PrintStream stream) {
-        stream.println("Node " + addr + ": " + output);
+    public void log(String output, PrintStream stream, String colorCommand) {
+    	if (USE_COLORS) {
+    		stream.println((char)27 + "[" + colorCommand + "m" + output + (char)27 + "[m");
+    	} else {
+    		stream.println("Node " + addr + ": " + output);
+    	}
     }
 }

@@ -86,6 +86,12 @@ public class MessageLayer {
      */
     @Option(value = "-z Delay rate")
     public static int rpcDelay = 0;
+    
+    /**
+     * Whether to print RPC logging
+     */
+    @Option(value = "R RPC output")
+    public static boolean rpcLog = true;
 
     // //////////////////////////////////////////////////
     /**
