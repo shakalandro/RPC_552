@@ -268,8 +268,8 @@ abstract class Channel {
  * Representation of an incoming channel to this node
  */
 class InChannel extends Channel {
-    public static String IN_LOG_FILE = ".rio_in_log";
-    public static String IN_TEMP_LOG_FILE = IN_LOG_FILE + "_TEMP";
+	public static String IN_LOG_FILE = ".rio_in_log";
+    public static String IN_TEMP_LOG_FILE = IN_LOG_FILE + "_temp";
 
     private HashMap<Integer, RIOPacket> outOfOrderMsgs;
 
@@ -332,8 +332,9 @@ class InChannel extends Channel {
  * Representation of an outgoing channel to this node
  */
 class OutChannel extends Channel {
-    public static String OUT_LOG_FILE = ".rio_out_log";
-    public static String OUT_TEMP_LOG_FILE = OUT_LOG_FILE + "_TEMP";
+	public static String OUT_LOG_FILE = ".rio_out_log";
+    public static String OUT_TEMP_LOG_FILE = OUT_LOG_FILE + "_temp";
+
     private static final int MAX_SEND_ATTEMPTS = Integer.MAX_VALUE - 1;
 
     private HashMap<Integer, RIOPacket> unACKedPackets;
@@ -414,7 +415,7 @@ class OutChannel extends Channel {
      */
     private void resendRIOPacket(int seqNum) {
         try {
-            if (attempts.containsKey(seqNum)
+            if (unACKedPackets.containsKey(seqNum)
                     && attempts.get(seqNum) < MAX_SEND_ATTEMPTS) {
                 Method onTimeoutMethod = Callback.getMethod("onTimeout",
                         parent, new String[] { "java.lang.Integer",

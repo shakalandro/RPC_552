@@ -38,8 +38,9 @@ import plume.Options;
  *  -l --synopticPartiallyOrderedLogFilename=<string> - Synoptic partially ordered log filename [default ]
  *  -o --replayOutputFilename=<string>                - Replay output filename [default ]
  *  --replayInputFilename=<string>                    - Replay input filename [default ]
- * 
- * </pre>
+ *  -F --runForever									  - Run forever
+ *
+ * </pre>   
  */
 public class MessageLayer {
 
@@ -182,9 +183,11 @@ public class MessageLayer {
     /**
      * The log filename for replay output
      */
-    @Option(value = "-o Replay output filename",
-            aliases = { "-replay-outfile" })
+    @Option(value = "-o Replay output filename", aliases = { "-replay-outfile" })
     public static String replayOutputFilename = "";
+    
+    @Option(value="-F Run Manager forever", aliases={"-runForever"})
+	public static boolean runForever = false;
 
     /**
      * The log filename for replay input

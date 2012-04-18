@@ -119,7 +119,7 @@ public class Packet {
 			return new String("Packet: " + src + ": FIN");
 		}
 		return new String("Packet: " + src + "->" + dest + " protocol: " + protocol + 
-				" contents: " + Utility.byteArrayToString(payload));
+				" contents: " + Utility.byteArrayToString(payload).trim());
 	}
 
 	/**

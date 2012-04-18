@@ -8,13 +8,18 @@ import edu.washington.cs.cse490h.lib.Callback;
  * */
 
 public class FacebookTestNode extends FacebookNode {
+	public static double getFailureRate() { return 0/500.0; }
+	public static double getRecoveryRate() { return 50/100.0; }
+	public static double getDropRate() { return 0/100.0; }
+	public static double getDelayRate() { return 0/100.0; }
+	
 	public static String BEGIN_COMMAND = "begin";
 	public static int SERVER = 0;
 	
 	public static final String USER1 = "roy";
 	public static final String USER2 = "stinkypete";
 	
-	public enum State {
+	public static enum State {
 		START,
 		CREATE1,
 		CREATE2,
@@ -28,19 +33,31 @@ public class FacebookTestNode extends FacebookNode {
 		POST,
 		LOGOUT2,
 		LOGIN1_AGAIN,
+		READ_POSTS,
 		END;
 	}
 	
-	private State state;
+	private static State state = State.START;
+	private boolean justBooted;
+	
+	
+	@Override
+	public void start() {
+		super.start();
+		printOutput("starting FacebookTestNode " + addr);
+		printOutput("STATE is " + FacebookTestNode.state.name());
+		if (addr != SERVER) {
+			onCommand(BEGIN_COMMAND);
+		}
+		justBooted = true;
+	}
 	
 	@Override
 	public void onCommand(String command) {
 		if (addr == SERVER) {
 			printError("You cannot test as the server");
 		} else if (command.equals(BEGIN_COMMAND)) {
-			state = State.START;
 			changeState();
-			registerCallback();					
 		}
 	}
 	
@@ -60,33 +77,37 @@ public class FacebookTestNode extends FacebookNode {
 	// Switch state a make a new request if the old one is done
 	public void changeState() {
 		if (!doingWork) {
+			if (!justBooted) {
+				FacebookTestNode.state = State.values()[Math.min(state.ordinal() + 1, State.END.ordinal())];
+				printOutput("STATE is " + FacebookTestNode.state.name());
+			}
 			try {
-				switch (state) {
-					case START:
-						this.createNewUser(USER1); break;
+				switch (FacebookTestNode.state) {
 					case CREATE1:
-						this.createNewUser(USER2); break;
+						this.createNewUser(USER1); break;
 					case CREATE2:
-						this.showUsers(); break;
+						this.createNewUser(USER2); break;
 					case SHOW_USERS:
-						this.loginUser(USER1); break;
+						this.showUsers(); break;
 					case LOGIN1:
-						this.requestFriend(USER2); break; 
-					case REQUEST2:
-						this.logoutUser(); break;
-					case LOGOUT1:
-						this.loginUser(USER2); break;
-					case LOGIN2:
-						this.showRequests(); break;
-					case SHOW_REQUESTS:
-						this.acceptFriend(USER1); break;
-					case ACCEPT_REQUEST:
-						this.postMessage("HI " + USER1 + "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"); break;
-					case POST:
-						this.logoutUser();
-					case LOGOUT2:
 						this.loginUser(USER1); break;
+					case REQUEST2:
+						this.requestFriend(USER2); break; 
+					case LOGOUT1:
+						this.logoutUser(); break;
+					case LOGIN2:
+						this.loginUser(USER2); break;
+					case SHOW_REQUESTS:
+						this.showRequests(); break;
+					case ACCEPT_REQUEST:
+						this.acceptFriend(USER1); break;
+					case POST:
+						this.postMessage("HI " + USER1 + "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"); break;
+					case LOGOUT2:
+						this.logoutUser();
 					case LOGIN1_AGAIN:
+						this.loginUser(USER1); break;
+					case READ_POSTS:
 						this.readPosts(); break;
 					default:
 						break;
@@ -94,8 +115,7 @@ public class FacebookTestNode extends FacebookNode {
 			} catch (Exception e) {
 				e.printStackTrace();
 			}
-			state = State.values()[Math.min(state.ordinal() + 1, State.END.ordinal())];
-			printOutput("Changed state to " + state.name());
+			justBooted = false;
 		}
 		if (state != State.END) {
 			registerCallback();

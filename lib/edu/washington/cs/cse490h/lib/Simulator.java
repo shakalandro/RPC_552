@@ -123,7 +123,7 @@ public class Simulator extends Manager {
 		synPartialOrderLogger.start(MessageLayer.synopticPartialOrderLogFilename);
 
 		if (cmdInputType == InputType.FILE) {
-			while (!inTransitMsgs.isEmpty() || !sortedEvents.isEmpty() || !waitingTOs.isEmpty()) {
+			while (!inTransitMsgs.isEmpty() || !sortedEvents.isEmpty() || !waitingTOs.isEmpty() || MessageLayer.runForever) {
 				if (!cleanOutput) {
 					System.out.println("\nTime: " + now());
 				}

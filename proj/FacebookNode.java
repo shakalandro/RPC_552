@@ -234,10 +234,8 @@ public class FacebookNode extends RPCNode {
 
 		// If we failed because the .users file doesn't exist, then we must create it.
 		if (errorCode != null && errorCode.equals(FILE_NO_EXIST)) {
-			Object[] failureParams = tryAgainCallback.getParams();
 			//logOutput(".user file doesn't exist. Creating now.");
 			createUsersFile(null, userNoExistsCallback);
-			doingWork = false;
 			return;
 		}
 
@@ -264,7 +262,6 @@ public class FacebookNode extends RPCNode {
 		if (errorCode != null && errorCode.equals(FILE_EXISTS)) {
 			// Calls createPostsFile
 			createUserFilesCallback.invoke();
-			doingWork = false;
 			return;
 		}
 				
@@ -295,7 +292,6 @@ public class FacebookNode extends RPCNode {
 		// If so, we can just move on to making the friends file.
 		if (errorCode != null && errorCode.equals(FILE_EXISTS)) {
 			createFriendsFile(null, userName);
-			doingWork = false;
 			return;
 		}
 		
@@ -323,7 +319,6 @@ public class FacebookNode extends RPCNode {
 		// If so, we can just move on to making the requests file.
 		if (errorCode != null && errorCode.equals(FILE_EXISTS)) {
 			createRequestsFile(null, userName);
-			doingWork = false;
 			return;
 		}
 
@@ -350,7 +345,6 @@ public class FacebookNode extends RPCNode {
 		// If so, we can just move on to appending the name to the list of existing users.
 		if (errorCode != null && errorCode.equals(FILE_EXISTS)) {
 			addUserToList(null, userName);
-			doingWork = false;
 			return;
 		}
 
@@ -919,6 +913,7 @@ public class FacebookNode extends RPCNode {
 		Scanner userScanner = new Scanner(fileContents);
 		while (userScanner.hasNext()) {
 			String nextName = userScanner.next();
+			System.out.println("name length: " + nextName.length());
 			if (userName.equals(nextName)) {
 				userExistsCallback.invoke();
 				return;
