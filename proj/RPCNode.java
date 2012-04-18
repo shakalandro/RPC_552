@@ -11,17 +11,33 @@ import edu.washington.cs.cse490h.lib.PersistentStorageWriter;
 import edu.washington.cs.cse490h.lib.Utility;
 
 /*
- * This class provides RPC functionality. It is the implementation of client and server stubs and
- * handlers as well as the file commands that are provider to users.
+ * This class provides RPC functionality. It is the implementation of client and
+ * server stubs and handlers as well as the file commands that are provider to
+ * users.
  * 
  * @author Jenny Abrahamson
- * */
-
+ */
 public class RPCNode extends RIONode {
-	
-	// Whether to suppress most printing error messages.
-	public boolean printStuff = false;
-	
+
+    public static double getFailureRate() {
+        return 0 / 100.0;
+    }
+
+    public static double getRecoveryRate() {
+        return 0 / 100.0;
+    }
+
+    public static double getDropRate() {
+        return 0 / 100.0;
+    }
+
+    public static double getDelayRate() {
+        return 0 / 100.0;
+    }
+
+    // Whether to suppress most printing error messages.
+    public boolean printStuff = true;
+
     // Session ID -- on start up, Servers initialize this value using the
     // current time. Client invoke an RPC call to fetch this value from the
     // server
@@ -126,8 +142,8 @@ public class RPCNode extends RIONode {
                 }
             }
         } else {
-        	// Else invalid request, ignore
-        	logError("Received invalid request: \"" + command + "\"");
+            // Else invalid request, ignore
+            logError("Received invalid request: \"" + command + "\"");
         }
     }
 
@@ -140,17 +156,17 @@ public class RPCNode extends RIONode {
         if (protocol == Protocol.RPC_REQUEST_PKT) {
             RPCRequestPacket pkt = RPCRequestPacket.unpack(msg);
             if (printStuff) {
-            	logOutput("JUST RECEIVED: " + pkt.toString());
+                logOutput("JUST RECEIVED: " + pkt.toString());
             }
             handleRPCrequest(from, pkt);
         } else if (protocol == Protocol.RPC_RESULT_PKT) {
             RPCResultPacket pkt = RPCResultPacket.unpack(msg);
             if (printStuff) {
-            	logOutput("JUST RECEIVED: " + pkt.toString());
+                logOutput("JUST RECEIVED: " + pkt.toString());
             }
             handleRPCresult(from, pkt);
         } else {
-           // logError("unknown protocol: " + protocol);
+            // logError("unknown protocol: " + protocol);
             return;
         }
     }
@@ -357,16 +373,16 @@ public class RPCNode extends RIONode {
 
                 // Log success message
                 if (printStuff) {
-	                logOutput("Successfully completed: " + requestType
-	                        + " on server " + request.getServerAddr()
-	                        + " and file " + request.getFilename());
+                    logOutput("Successfully completed: " + requestType
+                            + " on server " + request.getServerAddr()
+                            + " and file " + request.getFilename());
                 }
 
                 // If GET command result, print contents of file to console
                 if (requestType == Command.GET) {
                     String file = Utility.byteArrayToString(pkt.getPayload());
                     if (printStuff) {
-                    	logOutput(file);
+                        logOutput(file);
                     }
                     if (callback != null) {
                         Object[] params = callback.getParams();
@@ -518,8 +534,7 @@ public class RPCNode extends RIONode {
      */
     private RPCResultPacket get(String filename, int id) {
         if (!Utility.fileExists(this, filename)) {
-            logError("could not get " + filename
-                    + ", does not exist.");
+            logError("could not get " + filename + ", does not exist.");
             return RPCResultPacket.getPacket(this, id, Status.NOT_EXIST,
                     Utility.stringToByteArray(Status.NOT_EXIST.getMsg()));
         }
@@ -553,8 +568,7 @@ public class RPCNode extends RIONode {
      */
     private RPCResultPacket create(String filename, int id) {
         if (Utility.fileExists(this, filename)) {
-            logError("could not create " + filename
-                    + ", already exists.");
+            logError("could not create " + filename + ", already exists.");
             return RPCResultPacket.getPacket(this, id, Status.ALREADY_EXISTS,
                     Utility.stringToByteArray(Status.ALREADY_EXISTS.getMsg()));
         }
@@ -582,8 +596,7 @@ public class RPCNode extends RIONode {
      */
     private RPCResultPacket put(String filename, String contents, int id) {
         if (!Utility.fileExists(this, filename)) {
-            logError("could not put " + filename
-                    + ", does not exist.");
+            logError("could not put " + filename + ", does not exist.");
             return RPCResultPacket.getPacket(this, id, Status.NOT_EXIST,
                     Utility.stringToByteArray(Status.NOT_EXIST.getMsg()));
         }
@@ -632,8 +645,7 @@ public class RPCNode extends RIONode {
      */
     private RPCResultPacket append(String filename, String contents, int id) {
         if (!Utility.fileExists(this, filename)) {
-            logError("could not append to " + filename
-                    + ", does not exist.");
+            logError("could not append to " + filename + ", does not exist.");
             return RPCResultPacket.getPacket(this, id, Status.NOT_EXIST,
                     Utility.stringToByteArray(Status.NOT_EXIST.getMsg()));
         }
@@ -647,9 +659,8 @@ public class RPCNode extends RIONode {
             int size = Math.max(reader.read(dummy_buf), 0);
             if (size + contents.length() > MAX_FILE_SIZE) {
                 int overflow = size + contents.length() - MAX_FILE_SIZE;
-                logError("could not append to "
-                        + filename + ", contents was " + overflow
-                        + " characters too long.");
+                logError("could not append to " + filename + ", contents was "
+                        + overflow + " characters too long.");
                 return RPCResultPacket.getPacket(this, id, Status.TOO_LARGE,
                         Utility.stringToByteArray(Status.TOO_LARGE.getMsg()));
             }

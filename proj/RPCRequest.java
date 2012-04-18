@@ -1,4 +1,3 @@
-
 import edu.washington.cs.cse490h.lib.Callback;
 
 /**
@@ -46,5 +45,9 @@ public class RPCRequest {
 
     public Callback getFailure() {
         return this.failure;
+    }
+
+    public String toString() {
+        return "RPC Request: " + pckt;
     }
 }

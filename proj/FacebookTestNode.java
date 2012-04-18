@@ -8,7 +8,7 @@ import edu.washington.cs.cse490h.lib.Callback;
  * */
 
 public class FacebookTestNode extends FacebookNode {
-	public static double getFailureRate() { return 1/100.0; }
+	public static double getFailureRate() { return 1/500.0; }
 	public static double getDropRate() { return 20/100.0; }
 	public static double getDelayRate() { return 40/100.0; }
 	
