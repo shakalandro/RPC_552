@@ -106,6 +106,7 @@ public class RPCNode extends RIONode {
                 }
             } catch (IOException e) {
                 // fail ourselves and try again
+            	logError("Could not recover log file for put, failing now.");
                 fail();
             }
         }

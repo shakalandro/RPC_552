@@ -8,10 +8,10 @@ import edu.washington.cs.cse490h.lib.Callback;
  * */
 
 public class FacebookTestNode extends FacebookNode {
-	public static double getFailureRate() { return 1/500.0; }
+	public static double getFailureRate() { return 0/500.0; }
 	public static double getRecoveryRate() { return 50/100.0; }
-	public static double getDropRate() { return 20/100.0; }
-	public static double getDelayRate() { return 40/100.0; }
+	public static double getDropRate() { return 0/100.0; }
+	public static double getDelayRate() { return 0/100.0; }
 	
 	public static String BEGIN_COMMAND = "begin";
 	public static int SERVER = 0;
@@ -33,6 +33,7 @@ public class FacebookTestNode extends FacebookNode {
 		POST,
 		LOGOUT2,
 		LOGIN1_AGAIN,
+		READ_POSTS,
 		END;
 	}
 	
@@ -44,6 +45,7 @@ public class FacebookTestNode extends FacebookNode {
 	public void start() {
 		super.start();
 		logOutput("starting FacebookTestNode " + addr);
+		logOutput("STATE is " + FacebookTestNode.state.name());
 		if (addr != SERVER) {
 			onCommand(BEGIN_COMMAND);
 		}
@@ -75,43 +77,43 @@ public class FacebookTestNode extends FacebookNode {
 	// Switch state a make a new request if the old one is done
 	public void changeState() {
 		if (!doingWork) {
-			logOutput("STATE is " + FacebookTestNode.state.name());
+			if (!justBooted) {
+				FacebookTestNode.state = State.values()[Math.min(state.ordinal() + 1, State.END.ordinal())];
+				logOutput("STATE is " + FacebookTestNode.state.name());
+			}
 			try {
 				switch (FacebookTestNode.state) {
-					case START:
-						this.createNewUser(USER1); break;
 					case CREATE1:
-						this.createNewUser(USER2); break;
+						this.createNewUser(USER1); break;
 					case CREATE2:
-						this.showUsers(); break;
+						this.createNewUser(USER2); break;
 					case SHOW_USERS:
-						this.loginUser(USER1); break;
+						this.showUsers(); break;
 					case LOGIN1:
-						this.requestFriend(USER2); break; 
-					case REQUEST2:
-						this.logoutUser(); break;
-					case LOGOUT1:
-						this.loginUser(USER2); break;
-					case LOGIN2:
-						this.showRequests(); break;
-					case SHOW_REQUESTS:
-						this.acceptFriend(USER1); break;
-					case ACCEPT_REQUEST:
-						this.postMessage("HI " + USER1 + "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"); break;
-					case POST:
-						this.logoutUser();
-					case LOGOUT2:
 						this.loginUser(USER1); break;
+					case REQUEST2:
+						this.requestFriend(USER2); break; 
+					case LOGOUT1:
+						this.logoutUser(); break;
+					case LOGIN2:
+						this.loginUser(USER2); break;
+					case SHOW_REQUESTS:
+						this.showRequests(); break;
+					case ACCEPT_REQUEST:
+						this.acceptFriend(USER1); break;
+					case POST:
+						this.postMessage("HI " + USER1 + "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"); break;
+					case LOGOUT2:
+						this.logoutUser();
 					case LOGIN1_AGAIN:
+						this.loginUser(USER1); break;
+					case READ_POSTS:
 						this.readPosts(); break;
 					default:
 						break;
 				}
 			} catch (Exception e) {
 				e.printStackTrace();
-			}
-			if (!justBooted) {
-				FacebookTestNode.state = State.values()[Math.min(state.ordinal() + 1, State.END.ordinal())];
 			}
 			justBooted = false;
 		}

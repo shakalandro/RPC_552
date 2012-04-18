@@ -17,9 +17,10 @@ import edu.washington.cs.cse490h.lib.Callback;
  * */
 
 public class FacebookNode extends RPCNode {
-	public static double getFailureRate() { return 1/100.0; }
-	public static double getDropRate() { return 20/100.0; }
-	public static double getDelayRate() { return 40/100.0; }
+	public static double getFailureRate() { return 0/100.0; }
+	public static double getRecoveryRate() { return 50/100.0; }
+	public static double getDropRate() { return 5/100.0; }
+	public static double getDelayRate() { return 10/100.0; }
 	
 	// The available facebook commands that can be entered by the user.
 	private static final String CREATE_COMMAND = "create";

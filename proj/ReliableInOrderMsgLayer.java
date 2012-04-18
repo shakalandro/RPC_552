@@ -415,7 +415,7 @@ class OutChannel extends Channel {
      */
     private void resendRIOPacket(int seqNum) {
         try {
-            if (attempts.containsKey(seqNum)
+            if (unACKedPackets.containsKey(seqNum)
                     && attempts.get(seqNum) < MAX_SEND_ATTEMPTS) {
                 Method onTimeoutMethod = Callback.getMethod("onTimeout",
                         parent, new String[] { "java.lang.Integer",
