@@ -18,10 +18,8 @@ time
 time
 time
 1 create 0 sadFile
-fail 0
 time
 1 create 0 happyFile
-start 0
 time
 1 put 0 happyFile I'm a happy file :)
 time
