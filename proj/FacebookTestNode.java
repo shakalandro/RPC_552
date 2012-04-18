@@ -9,6 +9,7 @@ import edu.washington.cs.cse490h.lib.Callback;
 
 public class FacebookTestNode extends FacebookNode {
 	public static double getFailureRate() { return 1/500.0; }
+	public static double getRecoveryRate() { return 50/100.0; }
 	public static double getDropRate() { return 20/100.0; }
 	public static double getDelayRate() { return 40/100.0; }
 	
@@ -36,15 +37,17 @@ public class FacebookTestNode extends FacebookNode {
 	}
 	
 	private static State state = State.START;
-	private boolean justBooted = true;
+	private boolean justBooted;
 	
 	
 	@Override
 	public void start() {
 		super.start();
+		logOutput("starting FacebookTestNode " + addr);
 		if (addr != SERVER) {
 			onCommand(BEGIN_COMMAND);
 		}
+		justBooted = true;
 	}
 	
 	@Override
@@ -72,6 +75,7 @@ public class FacebookTestNode extends FacebookNode {
 	// Switch state a make a new request if the old one is done
 	public void changeState() {
 		if (!doingWork) {
+			logOutput("STATE is " + FacebookTestNode.state.name());
 			try {
 				switch (FacebookTestNode.state) {
 					case START:
@@ -110,7 +114,6 @@ public class FacebookTestNode extends FacebookNode {
 				FacebookTestNode.state = State.values()[Math.min(state.ordinal() + 1, State.END.ordinal())];
 			}
 			justBooted = false;
-			logOutput("Changed state to " + FacebookTestNode.state.name());
 		}
 		if (state != State.END) {
 			registerCallback();

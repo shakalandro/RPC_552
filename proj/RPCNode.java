@@ -6,6 +6,7 @@ import java.util.LinkedList;
 import java.util.Queue;
 
 import edu.washington.cs.cse490h.lib.Callback;
+import edu.washington.cs.cse490h.lib.MessageLayer;
 import edu.washington.cs.cse490h.lib.PersistentStorageReader;
 import edu.washington.cs.cse490h.lib.PersistentStorageWriter;
 import edu.washington.cs.cse490h.lib.Utility;
@@ -20,19 +21,19 @@ import edu.washington.cs.cse490h.lib.Utility;
 public class RPCNode extends RIONode {
 
     public static double getFailureRate() {
-        return 0 / 100.0;
+        return MessageLayer.rpcFail / 100.0;
     }
 
     public static double getRecoveryRate() {
-        return 0 / 100.0;
+        return MessageLayer.rpcRecover / 100.0;
     }
 
     public static double getDropRate() {
-        return 0 / 100.0;
+        return MessageLayer.rpcDrop / 100.0;
     }
 
     public static double getDelayRate() {
-        return 0 / 100.0;
+        return MessageLayer.rpcDelay / 100.0;
     }
 
     // Whether to suppress most printing error messages.

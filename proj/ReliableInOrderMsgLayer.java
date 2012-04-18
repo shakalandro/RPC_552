@@ -106,7 +106,7 @@ public class ReliableInOrderMsgLayer {
             outConnections.put(destAddr, out);
         }
 
-        out.sendRIOPacket(n, protocol, payload);
+        out.sendRIOPacket(protocol, payload);
     }
 
     /**
@@ -119,7 +119,7 @@ public class ReliableInOrderMsgLayer {
      *            The sequence number of the unACKed packet
      */
     public void onTimeout(Integer destAddr, Integer seqNum) {
-        outConnections.get(destAddr).onTimeout(n, seqNum);
+        outConnections.get(destAddr).onTimeout(seqNum);
     }
 
     @Override
@@ -303,8 +303,8 @@ class InChannel extends Channel {
             // We received a subsequent packet and should store it
             outOfOrderMsgs.put(seqNum, pkt);
         }
-        // Duplicate packets are ignored
 
+        // Duplicate packets are ignored
         return pktsToBeDelivered;
     }
 
@@ -363,7 +363,7 @@ class OutChannel extends Channel {
      * @param payload
      *            The payload to be sent
      */
-    protected void sendRIOPacket(RIONode n, int protocol, byte[] payload) {
+    protected void sendRIOPacket(int protocol, byte[] payload) {
         try {
             Method onTimeoutMethod = Callback.getMethod("onTimeout", parent,
                     new String[] { "java.lang.Integer", "java.lang.Integer" });
@@ -387,9 +387,9 @@ class OutChannel extends Channel {
      * @param seqNum
      *            The sequence number of the unACKed packet
      */
-    public void onTimeout(RIONode n, Integer seqNum) {
+    public void onTimeout(Integer seqNum) {
         if (unACKedPackets.containsKey(seqNum)) {
-            resendRIOPacket(n, seqNum);
+            resendRIOPacket(seqNum);
         }
     }
 
@@ -413,7 +413,7 @@ class OutChannel extends Channel {
      * @param seqNum
      *            The sequence number of the unACKed packet
      */
-    private void resendRIOPacket(RIONode n, int seqNum) {
+    private void resendRIOPacket(int seqNum) {
         try {
             if (attempts.containsKey(seqNum)
                     && attempts.get(seqNum) < MAX_SEND_ATTEMPTS) {
