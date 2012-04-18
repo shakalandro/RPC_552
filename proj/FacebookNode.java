@@ -1,11 +1,11 @@
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Scanner;
 import java.util.Set;
-
-import java.lang.reflect.*;
 
 import edu.washington.cs.cse490h.lib.Callback;
 
@@ -18,9 +18,9 @@ import edu.washington.cs.cse490h.lib.Callback;
 
 public class FacebookNode extends RPCNode {
 	public static double getFailureRate() { return 0/100.0; }
-	public static double getRecoveryRate() { return 50/100.0; }
-	public static double getDropRate() { return 5/100.0; }
-	public static double getDelayRate() { return 10/100.0; }
+	public static double getRecoveryRate() { return 0/100.0; }
+	public static double getDropRate() { return 20/100.0; }
+	public static double getDelayRate() { return 40/100.0; }
 	
 	// The available facebook commands that can be entered by the user.
 	private static final String CREATE_COMMAND = "create";
@@ -279,7 +279,7 @@ public class FacebookNode extends RPCNode {
 	// warning to the console.
 	public void userAlreadyExists() {
 		doingWork = false;
-		logError("Sorry, a user by that name already exists. Might we suggest "
+		printError("Sorry, a user by that name already exists. Might we suggest "
 				+ "you be more creative?");
 	}
 
@@ -371,7 +371,7 @@ public class FacebookNode extends RPCNode {
 		
 		// If we're getting back an error code indicating that the user list is too big, let the client know
 		if (errorCode != null && errorCode.equals(FILE_TOO_LARGE)) {
-			logError("Sorry, the system can't handle any more users. " +
+			printError("Sorry, the system can't handle any more users. " +
 					"You're out of luck, friend.");
 			doingWork = false;
 			return;
@@ -397,7 +397,7 @@ public class FacebookNode extends RPCNode {
 	// Prints a message confirming success in creating a new user.
 	public void createSuccess(String userName) {
 		doingWork = false;
-		logOutput("Welcome to myface+, " + userName);
+		printOutput("Welcome to myface+, " + userName);
 	}
 
 	// ------------------------ USER LOGIN --------------------------------------//
@@ -407,7 +407,7 @@ public class FacebookNode extends RPCNode {
 		doingWork = true;
 		// If already logged in.
 		if (loggedInUser != null) {
-			logError("Sorry. Already logged-in as " + loggedInUser);
+			printError("Sorry. Already logged-in as " + loggedInUser);
 			doingWork = false;
 			return;
 		}
@@ -429,13 +429,13 @@ public class FacebookNode extends RPCNode {
 	// Sets the logged in user to the given string.
 	public void setLoggedInUser(String username) {
 		loggedInUser = username;
-		logOutput("Have a nice myface+ session, " + username);
+		printOutput("Have a nice myface+ session, " + username);
 		doingWork = false;
 	}
 
 	public void noSuchUserReport(String username) {
 		doingWork = false;
-		logError("Bad move, bro. No such user by the name of " + username);
+		printError("Bad move, bro. No such user by the name of " + username);
 	}
 
 	// ------------------------- USER LOGOUT ------------------------------//
@@ -443,9 +443,9 @@ public class FacebookNode extends RPCNode {
 	public void logoutUser() {
 		doingWork = true;
 		if (loggedInUser == null) {
-			logError("In order to log OUT, young one, you must first log IN.");
+			printError("In order to log OUT, young one, you must first log IN.");
 		} else {
-			logOutput("Logging out, " + loggedInUser);
+			printOutput("Logging out, " + loggedInUser);
 		}
 
 		loggedInUser = null;
@@ -480,7 +480,7 @@ public class FacebookNode extends RPCNode {
 	
 	public void reportAlreadyRequested(String user) {
 		doingWork = false;
-		logOutput("There is already a friend request between you and " + user + " in existence.");
+		printOutput("There is already a friend request between you and " + user + " in existence.");
 	}
 
 	// Check to make sure that the person is not already on this user's list of friends.
@@ -504,21 +504,21 @@ public class FacebookNode extends RPCNode {
 
 	public void reportAlreadyFriend(String userName) {
 		doingWork = false;
-		logError(userName + " is already your buddy. BFF's forever!");
+		printError(userName + " is already your buddy. BFF's forever!");
 	}
 
 	// Adds the name of the currently logged-in user to the requests file for the user specified
 	// by userName.
 	public void addToRequestsFile(Integer errorCode, String userName) throws SecurityException, ClassNotFoundException, NoSuchMethodException {
 		if (errorCode != null && errorCode.equals(FILE_TOO_LARGE)) {
-			logError("Sorry, " + userName + " has too many pending friend requests.");
+			printError("Sorry, " + userName + " has too many pending friend requests.");
 			doingWork = false;
 			return;
 		}
 		
 		// If file doesn't exist, then just say that the person doesn't exist and move on.
 		if (errorCode != null && errorCode.equals(FILE_NO_EXIST)) {
-			logError("Sorry, there is no such user named " + userName);
+			printError("Sorry, there is no such user named " + userName);
 			doingWork = false;
 			return;
 		}
@@ -544,7 +544,7 @@ public class FacebookNode extends RPCNode {
 	// Show this message when we've succesfully completed a friend request.
 	public void requestSuccess(String userName) {
 		doingWork = false;
-		logOutput("Proposal for intimate, life-long friendship submitted to " + userName);
+		printOutput("Proposal for intimate, life-long friendship submitted to " + userName);
 	}
 
 	// ------------------------------------------ READ POSTS ----------------------- //
@@ -647,7 +647,7 @@ public class FacebookNode extends RPCNode {
 
 		// Check that you actually have friends. If not, then just say so and get out of here.
 		if (friendList.isEmpty()) {
-			logError("Bummer. You don't have any friends! Might as well not be posting at all.");
+			printError("Bummer. You don't have any friends! Might as well not be posting at all.");
 			doingWork = false;
 			return;
 		}
@@ -669,7 +669,7 @@ public class FacebookNode extends RPCNode {
 		// If the current friend was unable to receive the post b/c they already have too many,
 		// let the user know and move on to the next person.
 		if (errorCode != null && errorCode.equals(FILE_TOO_LARGE)) {
-			logError("Sorry, " + friendList.get(friendIndex) + " has too many messages already.");
+			printError("Sorry, " + friendList.get(friendIndex) + " has too many messages already.");
 			
 			// If we failed on the last person, invoke the success callback to move on to the completion messsage.
 			// Otherwise, increment the friendIndex so that we can try with the next person.
@@ -689,7 +689,7 @@ public class FacebookNode extends RPCNode {
 	
 	public void messagePostSuccess() {
 		doingWork = false;
-		logOutput("Message posted to all friends!");
+		printOutput("Message posted to all friends!");
 	}
 
 	// ----------------------------------- LIST FRIEND REQUESTS-------------------------------- //
@@ -736,7 +736,7 @@ public class FacebookNode extends RPCNode {
 	// Prints a message to let user know that can't accept a non-existent friend request.
 	public void scoldUser(String username) {
 		doingWork = false;
-		logError(username + " don't wanna be yo friend.");
+		printError(username + " don't wanna be yo friend.");
 	}
 
 	// Adds the current user to the list of friends for username. In case of success, control passes
@@ -744,7 +744,7 @@ public class FacebookNode extends RPCNode {
 	public void addToTheirFriends(Integer errorCode, String username) throws SecurityException, ClassNotFoundException, NoSuchMethodException {
 		// Check to see if appending would make file too large.
 		if (errorCode != null && errorCode.equals(FILE_TOO_LARGE)) {
-			logError("Sorry, but " + username + " has too many friends already.");
+			printError("Sorry, but " + username + " has too many friends already.");
 			doingWork = false;
 			return;
 		}
@@ -768,7 +768,7 @@ public class FacebookNode extends RPCNode {
 	public void addToMyFriends(Integer errorCode, String username) throws SecurityException, ClassNotFoundException, NoSuchMethodException {
 		// Check to see if appending would make file too large.
 		if (errorCode != null && errorCode.equals(FILE_TOO_LARGE)) {
-			logError("Sorry, but you have too many friends.");
+			printError("Sorry, but you have too many friends.");
 			doingWork = false;
 			return;
 		}
@@ -843,7 +843,7 @@ public class FacebookNode extends RPCNode {
 	
 	public void acceptedFriendSuccess(String username) {
 		doingWork = false;
-		logOutput("Happy Day! We've made " + username + " our special friend!");
+		printOutput("Happy Day! We've made " + username + " our special friend!");
 	}
 
 	// ----------------------------------- LIST ALL USERS -------------------------------- //
@@ -894,7 +894,7 @@ public class FacebookNode extends RPCNode {
 
 		List<String> niceRequestList = new ArrayList<String>(pendingRequests);
 		if (niceRequestList.isEmpty()) {
-			logError("The list is empty. Probably your own fault?");
+			printError("The list is empty. Probably your own fault?");
 		} else {
 			System.out.println("\n");
 			for (String person : niceRequestList) {
@@ -927,7 +927,7 @@ public class FacebookNode extends RPCNode {
 	// If not logged in, prints a helpful message and returns false.
 	public boolean confirmLoggedIn() {
 		if (loggedInUser == null) {
-			logError("Turn on. LOG IN. Drop out. Then you can do this kind of thing.");
+			printError("Turn on. LOG IN. Drop out. Then you can do this kind of thing.");
 			return false;
 		}
 
@@ -959,4 +959,12 @@ public class FacebookNode extends RPCNode {
 		// We need to fetch the contents of the friends file for this user.
 		get(SERVER_ID, filename, checkForNameCallback, tryAgainCallback);
 	}
+	
+    public void printError(String output) {
+    	log(output, System.err, RPCNode.COLOR_CYAN);
+    }
+
+    public void printOutput(String output) {
+    	log(output, System.out, COLOR_PURPLE);
+    }
 }

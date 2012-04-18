@@ -44,8 +44,8 @@ public class FacebookTestNode extends FacebookNode {
 	@Override
 	public void start() {
 		super.start();
-		logOutput("starting FacebookTestNode " + addr);
-		logOutput("STATE is " + FacebookTestNode.state.name());
+		printOutput("starting FacebookTestNode " + addr);
+		printOutput("STATE is " + FacebookTestNode.state.name());
 		if (addr != SERVER) {
 			onCommand(BEGIN_COMMAND);
 		}
@@ -55,7 +55,7 @@ public class FacebookTestNode extends FacebookNode {
 	@Override
 	public void onCommand(String command) {
 		if (addr == SERVER) {
-			logError("You cannot test as the server");
+			printError("You cannot test as the server");
 		} else if (command.equals(BEGIN_COMMAND)) {
 			changeState();
 		}
@@ -79,7 +79,7 @@ public class FacebookTestNode extends FacebookNode {
 		if (!doingWork) {
 			if (!justBooted) {
 				FacebookTestNode.state = State.values()[Math.min(state.ordinal() + 1, State.END.ordinal())];
-				logOutput("STATE is " + FacebookTestNode.state.name());
+				printOutput("STATE is " + FacebookTestNode.state.name());
 			}
 			try {
 				switch (FacebookTestNode.state) {
