@@ -17,7 +17,7 @@ import edu.washington.cs.cse490h.lib.Callback;
  * */
 
 public class FacebookNode extends RPCNode {
-	public static double getFailureRate() { return 1/100.0; }
+	public static double getFailureRate() { return .01/100.0; }
 	public static double getRecoveryRate() { return 100/100.0; }
 	public static double getDropRate() { return 20/100.0; }
 	public static double getDelayRate() { return 40/100.0; }
@@ -913,7 +913,6 @@ public class FacebookNode extends RPCNode {
 		Scanner userScanner = new Scanner(fileContents);
 		while (userScanner.hasNext()) {
 			String nextName = userScanner.next();
-			System.out.println("name length: " + nextName.length());
 			if (userName.equals(nextName)) {
 				userExistsCallback.invoke();
 				return;
