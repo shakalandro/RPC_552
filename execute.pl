@@ -12,4 +12,3 @@ sub main {
 
     exec("java -cp $classpath edu.washington.cs.cse490h.lib.MessageLayer $args");
 }
-

@@ -1,0 +1,26 @@
+start 0
+start 1
+start 2
+start 3
+time
+1 create 0 tester1
+3 create 2 tester3
+time
+1 put 0 tester1 hello
+3 put 2 tester3 hello
+time
+1 append 0 tester1 cheerio
+3 append 2 tester1 cheerio
+time
+1 get 2 tester3
+3 get 0 tester1
+time
+time
+time
+time
+time
+time
+time
+time
+time
+time

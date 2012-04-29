@@ -6,6 +6,8 @@ time
 time
 1 create 0 tester
 time
+time
+time
 1 put 0 tester hello
 time
 1 append 0 tester cheerio
@@ -17,8 +19,17 @@ time
 time
 time
 time
-1 create 0 sadFile
+time
+time
+time
+time
+time
 fail 0
+time
+1 create 0 sadFile
+time
+time
+time
 time
 1 create 0 happyFile
 start 0

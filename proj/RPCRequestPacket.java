@@ -23,14 +23,19 @@ public class RPCRequestPacket {
     private Command request;
     private byte[] payload;
 
-    public static RPCRequestPacket getPacket(RPCNode node, int sessionID,
+    public static RPCRequestPacket getPacket(RPCNode node,
             int ID, Command requestType, byte[] requestPayload) {
         if (requestPayload.length > MAX_PAYLOAD_SIZE) {
             System.err.println("Invalid payload size in RPCRequestPacket");
             node.fail();
             return null;
         }
-        return new RPCRequestPacket(sessionID, ID, requestType, requestPayload);
+        return new RPCRequestPacket(ID, requestType, requestPayload);
+    }
+
+    private RPCRequestPacket(int requestID,
+            Command request, byte[] payload) {
+        this(0, requestID, request, payload);
     }
 
     private RPCRequestPacket(int serverSessionID, int requestID,
@@ -44,7 +49,7 @@ public class RPCRequestPacket {
         this.request = request;
         this.payload = payload;
     }
-
+    
     public static boolean validSizePayload(byte[] payload) {
         return payload.length < MAX_PAYLOAD_SIZE;
     }
@@ -135,7 +140,7 @@ public class RPCRequestPacket {
             if (bytesRead != payload.length && bytesRead != -1) {
                 return null;
             }
-
+            
             return new RPCRequestPacket(serverSessionID, requestID, request,
                     payload);
         } catch (IllegalArgumentException e) {

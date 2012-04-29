@@ -8,10 +8,10 @@ import edu.washington.cs.cse490h.lib.Callback;
  * */
 
 public class FacebookTestNode extends FacebookNode {
-	public static double getFailureRate() { return 0/500.0; }
+	public static double getFailureRate() { return 1/200.0; }
 	public static double getRecoveryRate() { return 50/100.0; }
-	public static double getDropRate() { return 0/100.0; }
-	public static double getDelayRate() { return 0/100.0; }
+	public static double getDropRate() { return 10/100.0; }
+	public static double getDelayRate() { return 10/100.0; }
 	
 	public static String BEGIN_COMMAND = "begin";
 	public static int SERVER = 0;
