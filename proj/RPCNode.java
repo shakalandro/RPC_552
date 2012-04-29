@@ -278,9 +278,16 @@ public class RPCNode extends RIONode {
      * @param filename
      *            Name of file for request
      */
-    private void makeRequest(Command command, String payload, Callback success,
+    protected void makeRequest(Command command, String payload, Callback success,
             Callback failure, int serverAddr, String filename) {
         
+    	this.makeRequest(command, Utility.stringToByteArray(payload), success, failure,
+    			serverAddr, filename);
+    }
+    
+    protected void makeRequest(Command command, byte[] payload, Callback success, Callback failure,
+    		int serverAddr, String filename) {
+    	
     	if (!serverSessionIDs.containsKey(serverAddr)) {
     		serverSessionIDs.put(serverAddr, -1);
             // May need to send RPC request to server requesting current
@@ -290,10 +297,8 @@ public class RPCNode extends RIONode {
     		}
     	}
     	
-        byte[] payloadBytes = Utility.stringToByteArray(payload);
-
-        if (RPCRequestPacket.validSizePayload(payloadBytes)) {
-            RPCRequestPacket pkt = RPCRequestPacket.getPacket(this, requestID++, command, payloadBytes);
+        if (RPCRequestPacket.validSizePayload(payload)) {
+            RPCRequestPacket pkt = RPCRequestPacket.getPacket(this, requestID++, command, payload);
             RPCRequest request = new RPCRequest(success, failure, pkt,
                     serverAddr, filename);
             requestQueue.add(request);
@@ -501,39 +506,54 @@ public class RPCNode extends RIONode {
             return;
         } else {
             // "New" request -- compute it!
-            String payload = Utility.byteArrayToString(pkt.getPayload());
-            switch (request) {
-            case GET:
-                result = get(payload, pkt.getRequestID());
-                break;
-            case CREATE:
-                result = create(payload, pkt.getRequestID());
-                break;
-            case DELETE:
-                result = delete(payload, pkt.getRequestID());
-                break;
-            default:
-                String[] contents = payload.split(" ", 2);
-                switch (request) {
-                case PUT:
-                    result = put(contents[0], contents[1], pkt.getRequestID());
-                    break;
-                case APPEND:
-                    result = append(contents[0], contents[1],
-                            pkt.getRequestID());
-                    break;
-                default:
-                    logError("Node " + addr + ": received unknown request "
-                            + request);
-                    return;
-                }
-            }
+            result = handleRPCCommand(request, from, pkt);
         }
 
         storedResults.put(from, result);
 
         // Send response
         RIOSend(from, Protocol.RPC_RESULT_PKT, result.pack());
+    }
+    
+    /**
+     * This method responds to an RPC command. This can be overriden in order to add new
+     * functionality to a subclass that understands other commands.
+     * @param request
+     * @param pkt
+     * @return The RPCResultPacket for the given command request.
+     */
+    protected RPCResultPacket handleRPCCommand(Command request, int senderAddr, RPCRequestPacket pkt) {
+	    String payload = Utility.byteArrayToString(pkt.getPayload());
+	    RPCResultPacket result;
+	    switch (request) {
+	    case GET:
+	        result = get(payload, pkt.getRequestID());
+	        break;
+	    case CREATE:
+	        result = create(payload, pkt.getRequestID());
+	        break;
+	    case DELETE:
+	        result = delete(payload, pkt.getRequestID());
+	        break;
+	    default:
+	        String[] contents = payload.split(" ", 2);
+	        switch (request) {
+	        case PUT:
+	            result = put(contents[0], contents[1], pkt.getRequestID());
+	            break;
+	        case APPEND:
+	            result = append(contents[0], contents[1],
+	                    pkt.getRequestID());
+	            break;
+	        default:
+	            logError("Node " + addr + ": received unknown request "
+	                    + request);
+	            result = RPCResultPacket.getPacket(this, pkt.getRequestID(),
+	                    Status.UNKNOWN_REQUEST,
+	                    Utility.stringToByteArray(mySessionID + ""));;
+	        }
+	    }
+	    return result;
     }
 
     // /////////////////////////////
@@ -728,13 +748,13 @@ public class RPCNode extends RIONode {
     // MISC
     // //////////
 
-    private void logError(String output) {
+    protected void logError(String output) {
     	if (MessageLayer.rpcLog) {
     		log(output, System.err, COLOR_RED);
     	}
     }
 
-    private void logOutput(String output) {
+    protected void logOutput(String output) {
     	if (MessageLayer.rpcLog) {
     		log(output, System.out, COLOR_GREEN);
     	}
