@@ -446,7 +446,7 @@ public class RPCNode extends RIONode {
      * 
      * 4. Otherwise process the new request
      */
-    private void handleRPCrequest(Integer from, RPCRequestPacket pkt) {
+    protected void handleRPCrequest(Integer from, RPCRequestPacket pkt) {
 
         Command request = pkt.getRequest();
 
