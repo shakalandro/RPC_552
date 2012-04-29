@@ -38,9 +38,8 @@ public class TxnPacket {
     	return TxnPacket.getPacket(node, txnID, TxnProtocol.TXN_COMMIT, null, request, payload);
     }
 
-    public static TxnPacket getAcceptPacket(TransactionNode node, UUID txnID,
-    		Set<Integer> participants) {
-    	return TxnPacket.getPacket(node, txnID, TxnProtocol.TXN_ACCEPT, participants, "", "");
+    public static TxnPacket getAcceptPacket(TransactionNode node, UUID txnID) {
+    	return TxnPacket.getPacket(node, txnID, TxnProtocol.TXN_ACCEPT, null, "", "");
     }
     
     public static TxnPacket getRejectPacket(TransactionNode node, UUID txnID, String message) {

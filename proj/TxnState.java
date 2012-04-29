@@ -1,10 +1,4 @@
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
-
-import edu.washington.cs.cse490h.lib.Utility;
+import java.util.*;
 
 class TxnState {
 		public static final String COMMITTED = "committed";
@@ -16,7 +10,11 @@ class TxnState {
 		public String args;
 		public Set<Integer> participants;
 		public Map<Integer, Boolean> responses;
-		public String status;
+		public TxnStatus status;
+		
+		public enum TxnStatus {
+			WAITING, COMMITTED, ABORTED, UNKNOWN;
+		}
 		
 		public TxnState(UUID txnID, Set<Integer> participants, String request, String args) {
 			this(txnID, participants, new HashMap<Integer, Boolean>(), request, args);
@@ -29,6 +27,7 @@ class TxnState {
 			this.responses = responses;
 			this.request = request;
 			this.args = args;
+			this.status = TxnStatus.UNKNOWN;
 		}
 		
 		/*
@@ -67,7 +66,7 @@ class TxnState {
 		}
 		
 		/*
-		 * Returns a string of the form
+		 * Returns a string of the form suitable for logging Records.
 		 * 
 		 * "txnID addrList request args"
 		 */
@@ -77,7 +76,7 @@ class TxnState {
 		}
 
 		/*
-		 * Expects a string of the form
+		 * Expects a string of the following form. Suitable for parsing Records
 		 * 
 		 * "txnID addrList request args"
 		 */
