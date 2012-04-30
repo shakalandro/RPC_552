@@ -1,3 +1,9 @@
+/*
+ * TODO:
+ * 	[] Add DONE record to log, call commit handler again if !DONE.
+ * 	[] Pass txnID to handlers.
+ */
+
 import java.io.*;
 import java.lang.reflect.*;
 import java.util.*;
@@ -18,6 +24,9 @@ import edu.washington.cs.cse490h.lib.Utility;
  * 
  * These propose and abort handlers should be idempotent and probably will be called multiple times
  * before the transaction is over.
+ * 
+ * The commit handler will only be called once and should be atomic if you want it to
+ * definitely happen.
  */
 public class TransactionNode extends RPCNode {
 	
