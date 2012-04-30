@@ -1,10 +1,3 @@
-/*
- * TODO(Roy):
- * 	[] Add DONE record to log, call commit handler again if !DONE.
- * 	[] Pass txnID to handlers.
- *  [] Method for number of outstanding txns
- */
-
 import java.io.*;
 import java.lang.reflect.*;
 import java.util.*;
@@ -99,6 +92,10 @@ public class TransactionNode extends RPCNode {
 						txnState.status = TxnState.TxnStatus.ABORTED;
 						participantTxns.put(txnState.txnID, txnState);
 						break;
+					case DONE:
+						txnState = TxnState.fromRecordString(txnRecordData);
+						participantTxns.get(txnState.txnID).status = TxnState.TxnStatus.DONE;
+						break;
 					}
 				}
 				// If there are outstanding coordinated txns without decisions then abort them
@@ -108,14 +105,21 @@ public class TransactionNode extends RPCNode {
 						sendTxnAbort(txnState.txnID);
 					}
 				}
-				// If a participant has made a decision then do nothing, should not execute txn twice
 				// If the participant did not log ACCEPT or REJECT then do nothing, this will result
 				// 		in abort eventually
+				
+				// If a participant has made a decision but did not log DONE, then we will run the
+				//		appropriate handler again.
 				// If the participant logged an ACCEPT but no decision then we must start the
 				// 		termination protocol.
 				for (TxnState txnState : participantTxns.values()) {
 					if (txnState.status == TxnState.TxnStatus.WAITING) {
 						sendDecisionRequest(txnState.txnID);
+					} else if (txnState.status == TxnState.TxnStatus.ABORTED) {
+						recieveTxnAbort(TxnPacket.getAbortPacket(this, txnState.txnID));
+					} else if (txnState.status == TxnState.TxnStatus.COMMITTED) {
+						recieveTxnCommit(TxnPacket.getCommitPacket(this, txnState.txnID,
+								txnState.request, txnState.args));
 					}
 				}
 			}
@@ -223,6 +227,20 @@ public class TransactionNode extends RPCNode {
 	////////////////////////////////// Participant Code //////////////////////////////////////////
 	
 	/*
+	 * Returns the number of txns that the participant has not fully finished. A txn is fully
+	 * finished if the commit handler or the abort handler is known to have run to completion.
+	 */
+	public int numUnfinishedTxns() {
+		int count = 0;
+		for (TxnState txnState : participantTxns.values()) {
+			if (txnState.status != TxnState.TxnStatus.DONE) {
+				count++;
+			}
+		}
+		return count;
+	}
+	
+	/*
 	 * Handles responding to a transaction request. Responds with either an ACK or NACK. If the
 	 * transaction proposal request is Foo, the user must implement a method with the following signature
 	 * 
@@ -296,6 +314,7 @@ public class TransactionNode extends RPCNode {
 			Method handler = me.getDeclaredMethod(COMMIT_PREFIX + request, java.lang.String.class,
 					java.util.UUID.class);
 			handler.invoke(me, pkt.getPayload(), txnState.txnID);
+			txnLogger.logDone(txnState);
 		} catch (NoSuchMethodException e) {
 			logError("There is no handler for transaction commit: " + request);
 			fail();
@@ -330,6 +349,7 @@ public class TransactionNode extends RPCNode {
 			Method handler = me.getDeclaredMethod(ABORT_PREFIX + request, java.lang.String.class,
 					java.util.UUID.class);
 			handler.invoke(me, pkt.getPayload(), txnState.txnID);
+			txnLogger.logDone(txnState);
 		} catch (NoSuchMethodException e) {
 			logError("There is no handler for transaction abort: " + request);
 			fail();
@@ -463,7 +483,8 @@ public class TransactionNode extends RPCNode {
 			ACCEPT("accept"),
 			REJECT("reject"),
 			COMMIT("commit"),
-			ABORT("abort");
+			ABORT("abort"),
+			DONE("done");
 			
 			private final String msg;
 			
@@ -509,6 +530,10 @@ public class TransactionNode extends RPCNode {
 		
 		public void logAbort(TxnState txnState) {
 			logRecord(Record.ABORT, txnState.toRecordString());
+		}
+		
+		public void logDone(TxnState txnState) {
+			logRecord(Record.DONE, txnState.toRecordString());
 		}
 		
 		/*

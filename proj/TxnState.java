@@ -13,7 +13,7 @@ class TxnState {
 		public TxnStatus status;
 		
 		public enum TxnStatus {
-			WAITING, COMMITTED, ABORTED, UNKNOWN;
+			WAITING, COMMITTED, ABORTED, DONE, UNKNOWN;
 		}
 		
 		public TxnState(UUID txnID, Set<Integer> participants, String request, String args) {
