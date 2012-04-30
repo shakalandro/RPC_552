@@ -1,7 +1,8 @@
 /*
- * TODO:
+ * TODO(Roy):
  * 	[] Add DONE record to log, call commit handler again if !DONE.
  * 	[] Pass txnID to handlers.
+ *  [] Method for number of outstanding txns
  */
 
 import java.io.*;
