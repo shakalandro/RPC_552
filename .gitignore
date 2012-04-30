@@ -9,3 +9,4 @@ jars/*
 *.log
 *Log
 storage/*
+.temp*

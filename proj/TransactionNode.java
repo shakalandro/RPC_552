@@ -19,9 +19,9 @@ import edu.washington.cs.cse490h.lib.Utility;
  * implement the transaction handlers which will be called if the transaction commits or aborts.
  * If the transaction request is "Foo", then the client must implement the following methods:
  * 
- * boolean proposeFoo(String args);
- * void commitFoo(String args);
- * void abortFoo(String args);
+ * boolean proposeFoo(UUID txnID, String args);
+ * void commitFoo(UUID txnID, String args);
+ * void abortFoo(UUID txnID, String args);
  * 
  * These propose and abort handlers should be idempotent and probably will be called multiple times
  * before the transaction is over.
@@ -133,9 +133,9 @@ public class TransactionNode extends RPCNode {
 	 * implement the transaction handlers which will be called if the transaction commits or aborts.
 	 * If the transaction request is Foo, then the client must implement the following methods:
 	 * 
-	 * boolean proposeFoo(String args);
-	 * void commitFoo(String args);
-	 * void abortFoo(String args);
+	 * boolean proposeFoo(UUID txnID, String args);
+	 * void commitFoo(UUID txnID, String args);
+	 * void abortFoo(UUID txnID, String args);
 	 */
 	public void proposeTransaction(Set<Integer> participant_addrs, String request, String args) {
 		if (!participant_addrs.contains(this.addr)) {
@@ -226,7 +226,7 @@ public class TransactionNode extends RPCNode {
 	 * Handles responding to a transaction request. Responds with either an ACK or NACK. If the
 	 * transaction proposal request is Foo, the user must implement a method with the following signature
 	 * 
-	 * boolean proposeFoo(String args);
+	 * boolean proposeFoo(UUID txnID, String args);
 	 * 
 	 * where the byte array are arguments to the request that the client should know how to parse.
 	 * If the client returns true then the transaction proposal is accepted otherwise the proposal
@@ -244,8 +244,9 @@ public class TransactionNode extends RPCNode {
 					pkt.getRequest(), pkt.getPayload());
 			participantTxns.put(txnID, txnState);
 			Class<? extends TransactionNode> me = this.getClass();
-			Method handler = me.getDeclaredMethod(PROPOSAL_PREFIX + request, java.lang.String.class);
-			Boolean accept = (Boolean)handler.invoke(me, pkt.getPayload());
+			Method handler = me.getDeclaredMethod(PROPOSAL_PREFIX + request, java.lang.String.class,
+					java.util.UUID.class);
+			Boolean accept = (Boolean)handler.invoke(me, pkt.getPayload(), txnState.txnID);
 			if (accept) {
 				txnLogger.logAccept(txnState);
 				txnState.status = TxnState.TxnStatus.WAITING;
@@ -278,7 +279,7 @@ public class TransactionNode extends RPCNode {
 	 * Handles responding to a transaction commit. If the transaction request is Foo, the user must
 	 * implement a method with the following signature
 	 * 
-	 * void commitFoo(String args);
+	 * void commitFoo(UUID txnID, String args);
 	 * 
 	 * where the byte array are arguments to the request that the client should know how to parse.
 	 * 
@@ -292,8 +293,9 @@ public class TransactionNode extends RPCNode {
 		String request = pkt.getRequest();
 		try {
 			Class<? extends TransactionNode> me = this.getClass();
-			Method handler = me.getDeclaredMethod(COMMIT_PREFIX + request, java.lang.String.class);
-			handler.invoke(me, pkt.getPayload());
+			Method handler = me.getDeclaredMethod(COMMIT_PREFIX + request, java.lang.String.class,
+					java.util.UUID.class);
+			handler.invoke(me, pkt.getPayload(), txnState.txnID);
 		} catch (NoSuchMethodException e) {
 			logError("There is no handler for transaction commit: " + request);
 			fail();
@@ -311,7 +313,7 @@ public class TransactionNode extends RPCNode {
 	 * Handles responding to a transaction abort. If the transaction request is Foo, the user must
 	 * implement a method with the following signature
 	 * 
-	 * void abortFoo(String args);
+	 * void abortFoo(UUID txnID, String args);
 	 * 
 	 * where the byte array are arguments to the request that the client should know how to parse.
 	 * 
@@ -325,8 +327,9 @@ public class TransactionNode extends RPCNode {
 		String request = pkt.getRequest();
 		try {
 			Class<? extends TransactionNode> me = this.getClass();
-			Method handler = me.getDeclaredMethod(ABORT_PREFIX + request, java.lang.String.class);
-			handler.invoke(me, pkt.getPayload());
+			Method handler = me.getDeclaredMethod(ABORT_PREFIX + request, java.lang.String.class,
+					java.util.UUID.class);
+			handler.invoke(me, pkt.getPayload(), txnState.txnID);
 		} catch (NoSuchMethodException e) {
 			logError("There is no handler for transaction abort: " + request);
 			fail();
