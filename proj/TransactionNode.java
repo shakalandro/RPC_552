@@ -10,7 +10,7 @@ import edu.washington.cs.cse490h.lib.Utility;
 /*
  * Allows for distributed transactions if a subclass knows how to respond to a request. The subclass must
  * implement the transaction handlers which will be called if the transaction commits or aborts.
- * If the transaction request is Foo, then the client must implement the following methods:
+ * If the transaction request is "Foo", then the client must implement the following methods:
  * 
  * boolean proposeFoo(byte[] args);
  * void commitFoo(byte[] args);
@@ -123,9 +123,9 @@ public class TransactionNode extends RPCNode {
 	 * implement the transaction handlers which will be called if the transaction commits or aborts.
 	 * If the transaction request is Foo, then the client must implement the following methods:
 	 * 
-	 * boolean proposeFoo(byte[] args);
-	 * void commitFoo(byte[] args);
-	 * void abortFoo(byte[] args);
+	 * boolean proposeFoo(String args);
+	 * void commitFoo(String args);
+	 * void abortFoo(String args);
 	 */
 	public void proposeTransaction(Set<Integer> participant_addrs, String request, String args) {
 		if (!participant_addrs.contains(this.addr)) {
@@ -234,7 +234,7 @@ public class TransactionNode extends RPCNode {
 					pkt.getRequest(), pkt.getPayload());
 			participantTxns.put(txnID, txnState);
 			Class<? extends TransactionNode> me = this.getClass();
-			Method handler = me.getDeclaredMethod(PROPOSAL_PREFIX + request, byte[].class);
+			Method handler = me.getDeclaredMethod(PROPOSAL_PREFIX + request, java.lang.String.class);
 			Boolean accept = (Boolean)handler.invoke(me, pkt.getPayload());
 			if (accept) {
 				txnLogger.logAccept(txnState);
@@ -282,7 +282,7 @@ public class TransactionNode extends RPCNode {
 		String request = pkt.getRequest();
 		try {
 			Class<? extends TransactionNode> me = this.getClass();
-			Method handler = me.getDeclaredMethod(COMMIT_PREFIX + request, byte[].class);
+			Method handler = me.getDeclaredMethod(COMMIT_PREFIX + request, java.lang.String.class);
 			handler.invoke(me, pkt.getPayload());
 		} catch (NoSuchMethodException e) {
 			logError("There is no handler for transaction commit: " + request);
@@ -315,7 +315,7 @@ public class TransactionNode extends RPCNode {
 		String request = pkt.getRequest();
 		try {
 			Class<? extends TransactionNode> me = this.getClass();
-			Method handler = me.getDeclaredMethod(ABORT_PREFIX + request, byte[].class);
+			Method handler = me.getDeclaredMethod(ABORT_PREFIX + request, java.lang.String.class);
 			handler.invoke(me, pkt.getPayload());
 		} catch (NoSuchMethodException e) {
 			logError("There is no handler for transaction abort: " + request);
