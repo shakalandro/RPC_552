@@ -12,9 +12,9 @@ import edu.washington.cs.cse490h.lib.Utility;
  * implement the transaction handlers which will be called if the transaction commits or aborts.
  * If the transaction request is "Foo", then the client must implement the following methods:
  * 
- * boolean proposeFoo(byte[] args);
- * void commitFoo(byte[] args);
- * void abortFoo(byte[] args);
+ * boolean proposeFoo(String args);
+ * void commitFoo(String args);
+ * void abortFoo(String args);
  * 
  * These propose and abort handlers should be idempotent and probably will be called multiple times
  * before the transaction is over.
