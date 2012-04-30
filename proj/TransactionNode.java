@@ -216,7 +216,7 @@ public class TransactionNode extends RPCNode {
 	 * Handles responding to a transaction request. Responds with either an ACK or NACK. If the
 	 * transaction proposal request is Foo, the user must implement a method with the following signature
 	 * 
-	 * boolean proposeFoo(byte[]);
+	 * boolean proposeFoo(String args);
 	 * 
 	 * where the byte array are arguments to the request that the client should know how to parse.
 	 * If the client returns true then the transaction proposal is accepted otherwise the proposal
@@ -268,7 +268,7 @@ public class TransactionNode extends RPCNode {
 	 * Handles responding to a transaction commit. If the transaction request is Foo, the user must
 	 * implement a method with the following signature
 	 * 
-	 * void commitFoo(byte[]);
+	 * void commitFoo(String args);
 	 * 
 	 * where the byte array are arguments to the request that the client should know how to parse.
 	 * 
@@ -301,7 +301,7 @@ public class TransactionNode extends RPCNode {
 	 * Handles responding to a transaction abort. If the transaction request is Foo, the user must
 	 * implement a method with the following signature
 	 * 
-	 * void abortFoo(byte[]);
+	 * void abortFoo(String args);
 	 * 
 	 * where the byte array are arguments to the request that the client should know how to parse.
 	 * 
