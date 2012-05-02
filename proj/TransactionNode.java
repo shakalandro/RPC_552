@@ -457,7 +457,7 @@ public class TransactionNode extends RPCNode {
 	
 	////////////////////////////////// Helper Code //////////////////////////////////////////////
 	
-	private Callback createCallback(String methodName, String[] parameterTypes, Object[] params) {
+	protected Callback createCallback(String methodName, String[] parameterTypes, Object[] params) {
 		Method m;
 		try {
 			m = Callback.getMethod(methodName, this, parameterTypes);

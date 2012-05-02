@@ -67,7 +67,7 @@ public class RPCNode extends RIONode {
     // Map for servers from client id to last computed result
     private Map<Integer, RPCResultPacket> storedResults;
 
-    private final int MAX_FILE_SIZE = Math
+    protected final int MAX_FILE_SIZE = Math
             .min(RPCRequestPacket.MAX_PAYLOAD_SIZE,
                     RPCResultPacket.MAX_PAYLOAD_SIZE);
     private final String TEMP_PUT_FILE = ".temp_put_file";

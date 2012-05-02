@@ -2,6 +2,8 @@ package edu.washington.cs.cse490h.lib;
 
 import java.io.File;
 import java.io.UnsupportedEncodingException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Random;
 
 /**
@@ -83,5 +85,21 @@ public class Utility {
     public static boolean fileExists(Node n, String filename) {
         File f = new File(realFilename(n.addr, filename));
         return f.exists();
+    }
+    
+    /**
+     * Returns all files that start with the given String.
+     */
+    public static List<File> getMatchingFiles(int nodeAddr, String prefix) {
+    	File directory = new File("storage/" + nodeAddr);
+    	File[] allFiles = directory.listFiles();
+    	List<File> matches = new ArrayList<File>();
+    	for (File file : allFiles) {
+    		if (file.getName().startsWith(prefix)) {
+    			matches.add(file);
+    		}
+    	}
+    	
+    	return matches;
     }
 }
