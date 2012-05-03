@@ -446,6 +446,7 @@ public class TransactionNode extends RPCNode {
 	protected RPCResultPacket handleRPCCommand(Command request, int senderAddr, RPCRequestPacket pkt) {
         if (request == Command.TXN) {
         	TxnPacket txnPkt = TxnPacket.unpack(pkt.getPayload());
+        	writeOutput("Recieved " + txnPkt);
         	byte[] result = Utility.stringToByteArray("");
         	TxnProtocol protocol = txnPkt.getProtocol();
         	
