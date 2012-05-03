@@ -686,9 +686,10 @@ public class FacebookNode extends TransactionNode {
 	}
 	
 	public void printAllPosts(String fileContents) {
+		printOutput("\tYour wall sir (madam):");
 		Scanner in = new Scanner(fileContents);
 		while (in.hasNextLine()) {
-			System.out.println(in.nextLine());
+			printOutput(in.nextLine());
 		}
 		doingWork = false;
 	}
@@ -738,7 +739,7 @@ public class FacebookNode extends TransactionNode {
 			String fileTxnString = f.getName().substring(f.getName().indexOf("||"));
 			if (!fileTxnString.equals(txnIdString)) {
 				// It's a temp file for a previous transaction. We can get rid of it.
-				System.out.println("Deleting temp file " + f.getName());
+				printOutput("Deleting temp file " + f.getName());
 				this.getWriter(f.getName(), false).delete();
 			}
 		}
@@ -1097,9 +1098,9 @@ public class FacebookNode extends TransactionNode {
 		if (niceRequestList.isEmpty()) {
 			printError("The list is empty. Probably your own fault?");
 		} else {
-			System.out.println("\n");
+			printOutput("\n\tHuzzah, a list!:");
 			for (String person : niceRequestList) {
-				System.out.println(person);
+				printOutput(person);
 			}
 		}
 		doingWork = false;
