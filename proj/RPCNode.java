@@ -71,52 +71,40 @@ public class RPCNode extends RIONode {
     
     @Override
     public void start() {
-        if (this.isServer()) {
-            // If server, need to initialize a new session id
-            mySessionID = (int) System.currentTimeMillis();
-            storedResults = new HashMap<Integer, RPCResultPacket>();
-            
-            // Recover from a failed put
-            if (Utility.fileExists(this, TEMP_PUT_FILE)) {
-                try {
-                    PersistentStorageReader reader = this.getReader(TEMP_PUT_FILE);
-                    if (!reader.ready()) {
-                        PersistentStorageWriter deleter = this.getWriter(
-                                TEMP_PUT_FILE, false);
-                        deleter.delete();
-                    } else {
-                        String filename = reader.readLine();
-                        char[] buf = new char[MAX_FILE_SIZE];
-                        reader.read(buf, 0, MAX_FILE_SIZE);
-                        PersistentStorageWriter writer = this.getWriter(filename,
-                                false);
-                        writer.write(buf);
+		// If server, need to initialize a new session id
+		mySessionID = (int) System.currentTimeMillis();
+		storedResults = new HashMap<Integer, RPCResultPacket>();
 
-                        // delete temp file
-                        PersistentStorageWriter deleter = this.getWriter(filename,
-                                false);
-                        deleter.delete();
-                    }
-                } catch (IOException e) {
-                    // fail ourselves and try again
-                	logError("Could not recover log file for put, failing now.");
-                    fail();
-                }
-            }
-        } else {
-            requestID = 0;
-            requestQueue = new LinkedList<RPCRequest>();
-            serverSessionIDs = new HashMap<Integer, Integer>();
-        }
-    }
-    
-    /**
-     * Server nodes, by convention, have even address ids.
-     * 
-     * @return whether this node is a server
-     */
-    public boolean isServer() {
-    	return addr % 2 == 0;
+		// Recover from a failed put
+		if (Utility.fileExists(this, TEMP_PUT_FILE)) {
+			try {
+				PersistentStorageReader reader = this.getReader(TEMP_PUT_FILE);
+				if (!reader.ready()) {
+					PersistentStorageWriter deleter = this.getWriter(
+							TEMP_PUT_FILE, false);
+					deleter.delete();
+				} else {
+					String filename = reader.readLine();
+					char[] buf = new char[MAX_FILE_SIZE];
+					reader.read(buf, 0, MAX_FILE_SIZE);
+					PersistentStorageWriter writer = this.getWriter(filename,
+							false);
+					writer.write(buf);
+
+					// delete temp file
+					PersistentStorageWriter deleter = this.getWriter(filename,
+							false);
+					deleter.delete();
+				}
+			} catch (IOException e) {
+				// fail ourselves and try again
+				logError("Could not recover log file for put, failing now.");
+				fail();
+			}
+		}
+		requestID = 0;
+		requestQueue = new LinkedList<RPCRequest>();
+		serverSessionIDs = new HashMap<Integer, Integer>();
     }
 
     /**
