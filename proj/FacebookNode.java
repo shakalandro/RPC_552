@@ -28,10 +28,9 @@ import edu.washington.cs.cse490h.lib.Utility;
  * */
 
 public class FacebookNode extends TransactionNode {
-	public static double getFailureRate() { return 0/100.0; }
-	public static double getRecoveryRate() { return 100/100.0; }
-	public static double getDropRate() { return 0/100.0; }
-	public static double getDelayRate() { return 0/100.0; }
+	
+	private static final String COLOR_CYAN = "0;36";
+	private static final String COLOR_PURPLE = "1;35";
 	
 	// The available facebook commands that can be entered by the user.
 	private static final String CREATE_COMMAND = "create";
@@ -750,19 +749,14 @@ public class FacebookNode extends TransactionNode {
 				
 				// See if a temp file for this transaction already exists and has content.
 				String tempFileName = getWallTempName(txnId, name);
-				boolean tempFileWritten;
 				PersistentStorageReader tempReader = null;
 				if (Utility.fileExists(this, tempFileName)) {
 					tempReader = this.getReader(tempFileName);
-					tempFileWritten = tempReader.ready();
-				} else {
-					tempFileWritten = false;
 				}
 				
-				if (tempFileWritten) {
+				if (tempReader != null && tempReader.ready()) {
 					// Read in the temp file contents and then write those contents to the old posts
 					// file.
-					assert(tempReader != null);
 					char[] buf = new char[MAX_FILE_SIZE];
 					tempReader.read(buf, 0, MAX_FILE_SIZE);
 					PersistentStorageWriter postsFileWriter = this.getWriter(MESSAGES_PREFIX + name, false);
@@ -871,7 +865,7 @@ public class FacebookNode extends TransactionNode {
 		get(userDataLocations.get(loggedInUser), filename, addToWallsCallback, tryAgainCallback);
 	}
 
-	public void addMessageToAllWalls(String friendList, String message) throws SecurityException, ClassNotFoundException, NoSuchMethodException, IllegalAccessException, InvocationTargetException {
+	public void addMessageToAllWalls(String friendList, String message) throws SecurityException {
 		// Get a non-duped set of all of my friends.
 		Set<String> friends = new HashSet<String>();
 		Scanner friendScanner = new Scanner(friendList);
@@ -1077,9 +1071,9 @@ public class FacebookNode extends TransactionNode {
 	// Prints out a de-duped list of all friend requests that the current user has.
 	public void showAllOfList(Integer errorCode, String filename, Integer serverId) throws SecurityException, ClassNotFoundException, NoSuchMethodException {
 		// Create a callback to try again in the case of failure.
-		String[] failParamTypes = { "java.lang.Integer", "java.lang.String" };
+		String[] failParamTypes = { "java.lang.Integer", "java.lang.String", "java.lang.Integer" };
 		Method tryAgain = Callback.getMethod("showAllOfList", this, failParamTypes);
-		Object[] failParams = { null, filename };
+		Object[] failParams = { null, filename, serverId };
 		Callback tryAgainCallback = new Callback(tryAgain, this, failParams);
 
 		// Create a callback to print the results once we've got 'em.
@@ -1166,12 +1160,12 @@ public class FacebookNode extends TransactionNode {
 		get(serverId, filename, checkForNameCallback, tryAgainCallback);
 	}
 	
-    public void printError(String output) {
-    	log(output, System.err, RPCNode.COLOR_CYAN);
+    protected void printError(String output) {
+    	log(output, System.err, COLOR_CYAN);
     }
 
-    public void printOutput(String output) {
-    	log(output, System.out, RPCNode.COLOR_PURPLE);
+    protected void printOutput(String output) {
+    	log(output, System.out, COLOR_PURPLE);
     }
  
 }

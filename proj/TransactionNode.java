@@ -1,6 +1,9 @@
-import java.io.*;
-import java.lang.reflect.*;
-import java.util.*;
+import java.io.IOException;
+import java.lang.reflect.Method;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
 
 import edu.washington.cs.cse490h.lib.Callback;
 import edu.washington.cs.cse490h.lib.PersistentStorageReader;
@@ -38,7 +41,8 @@ public class TransactionNode extends RPCNode {
 	private String logFile;
 	private TxnLog txnLogger;
 	
-	public static final String COLOR_DUNNO = "0;20";
+	private static final String COLOR_DUNNO = "0;20";
+	private static final String COLOR_BLUE = "0;34";
 	
 	@Override
 	public void start() {
@@ -489,12 +493,12 @@ public class TransactionNode extends RPCNode {
 		return new Callback(m, this, params);
 	}
 	
-	public void writeError(String output) {
+	private void writeError(String output) {
     	log(output, System.err, COLOR_DUNNO);
     }
 
-    public void writeOutput(String output) {
-    	log(output, System.out, COLOR_DUNNO);
+    private void writeOutput(String output) {
+    	log(output, System.out, COLOR_BLUE);
     }
 	
 	/*
