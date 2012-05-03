@@ -824,8 +824,9 @@ public class FacebookNode extends TransactionNode {
 	// Return an arg String for wall posting that is a packaged up combination of a list of 
 	// names of people to post to and the message that the client wants to post.
 	private String packageArgs(List<String> names, String message) {
-		String[] nameArray = (String[]) names.toArray();
-		String gluedNames = StringUtils.join(nameArray, ";");
+		Object[] nameArray = names.toArray();
+		String[] stringNameArray = Arrays.copyOf(nameArray, nameArray.length, String[].class);
+		String gluedNames = StringUtils.join(stringNameArray, ";");
 		return gluedNames + "||" + message;
 	}
 	
