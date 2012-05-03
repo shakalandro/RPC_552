@@ -28,10 +28,10 @@ import edu.washington.cs.cse490h.lib.Utility;
  * */
 
 public class FacebookNode extends TransactionNode {
-	public static double getFailureRate() { return .01/100.0; }
+	public static double getFailureRate() { return 0/100.0; }
 	public static double getRecoveryRate() { return 100/100.0; }
 	public static double getDropRate() { return 20/100.0; }
-	public static double getDelayRate() { return 40/100.0; }
+	public static double getDelayRate() { return 30/100.0; }
 	
 	// The available facebook commands that can be entered by the user.
 	private static final String CREATE_COMMAND = "create";
@@ -66,7 +66,6 @@ public class FacebookNode extends TransactionNode {
 	// The number of servers we'll have on the system. By convention, they have even numbered id's
 	// starting at 0. Also by convention, the .users file is stored on server 0.
 	private static final int NUM_SERVERS = 3;
-	private static final int SERVER_START_ID = 0;
 	private static final int ALL_USERS_LOCATION = 0;
 
 	// Name of the file, stored on the client machine, that specifies the names of each user and the id of the
@@ -133,6 +132,8 @@ public class FacebookNode extends TransactionNode {
 		// The next server that we'll use when storing the meta-dta for a new user will be the next server in the round-robin
 		// distribution.
 		nextServer = currentServer;
+		
+		printOutput("Client Node Initialized and Accepting Your Commands!");
 	}
 	
 	@Override
