@@ -156,9 +156,9 @@ public class TransactionNode extends RPCNode {
 					request, args);
 			// Respond to the participant's accept or reject response
 			Callback success = createCallback("receiveProposalResponse",
-					new String[] {"java.lang.Integer", "java.lang.byte[]"}, null);
+					new String[] {Integer.class.getName(), Byte[].class.getName()}, null);
 			// Abort the whole transaction
-			Callback failure = createCallback("sendTxnAbort", new String[] {"java.util.UUID"},
+			Callback failure = createCallback("sendTxnAbort", new String[] {UUID.class.getName()},
 					new Object[] {txnID});
 			this.makeRequest(Command.TXN, txnPkt.pack(), success, failure, addr, "");
 			writeOutput("(" + txnState.txnID + ") Issuing proposal request to " + addr);
@@ -166,7 +166,7 @@ public class TransactionNode extends RPCNode {
 		txnLogger.logStart(txnState);
 		// Abort the transaction if we do not hear from all participants in a timely manner
 		Callback abortTimeout = createCallback("proposalTimeoutAbort",
-				new String[] {"java.util.UUID"}, new Object[] {txnID});
+				new String[] {UUID.class.getName()}, new Object[] {txnID});
 		addTimeout(abortTimeout, PROPOSAL_RESPONSE_TIMEOUT);
 	}
 	
@@ -174,7 +174,7 @@ public class TransactionNode extends RPCNode {
 	 * Success callback for proposeTransaction. If all the participants have responded then a
 	 * decision is made and multicast out to the participants.
 	 */
-	public void receiveProposalResponse(int from, byte[] response) {
+	public void receiveProposalResponse(Integer from, Byte[] response) {
 		TxnPacket pkt = TxnPacket.unpack(response);
 		TxnState txnState = coordinatorTxns.get(pkt.getID());
 		if (pkt.getProtocol() == TxnProtocol.TXN_ACCEPT) {
@@ -225,7 +225,7 @@ public class TransactionNode extends RPCNode {
 	/*
 	 * Notifies all participants that accepted the proposal of an abort decision.
 	 */
-	private void sendTxnAbort(UUID txnID) {
+	public void sendTxnAbort(UUID txnID) {
 		writeOutput("(" + txnID + ") txn aborted");
 		for (Integer addr : coordinatorTxns.get(txnID).getAcceptors()) {
 			TxnPacket txnPkt = TxnPacket.getAbortPacket(this, txnID);
@@ -281,7 +281,7 @@ public class TransactionNode extends RPCNode {
 				txnState.status = TxnState.TxnStatus.WAITING;
 				// Request decision status if we don't hear back soon
 				Callback decisionTimeout = createCallback("sendDecisionRequest",
-						new String[] {"java.util.UUID"}, new Object[] {pkt.getID()});
+						new String[] {UUID.class.getName()}, new Object[] {pkt.getID()});
 				addTimeout(decisionTimeout, DECISION_TIMEOUT);
 				return TxnPacket.getAcceptPacket(this, pkt.getID());
 			} else {
@@ -387,12 +387,12 @@ public class TransactionNode extends RPCNode {
 		for (Integer addr : txnState.participants) {
 			TxnPacket txnPkt = TxnPacket.getDecisionRequestPacket(this, txnID);
 			Callback success = createCallback("receiveDecisionResponse",
-					new String[] {"java.lang.byte[]"}, null);
+					new String[] {Byte[].class.getName()}, null);
 			makeRequest(Command.TXN, txnPkt.pack(), success, null, addr, "");
 			writeOutput("(" + txnID + ") asking " + addr + " for decision");
 		}
 		Callback decisionTimeout = createCallback("resendDecisionRequest",
-				new String[] {"java.util.UUID"}, new Object[] {txnID});
+				new String[] {UUID.class.getName()}, new Object[] {txnID});
 		addTimeout(decisionTimeout, DECISION_RESEND_TIMEOUT);
 	}
 	
@@ -408,7 +408,7 @@ public class TransactionNode extends RPCNode {
 	 * Parses a decision request response, which could be an abort notification, commit notification
 	 * or an empty response symbolizing that the participant is waiting.
 	 */
-	public void receiveDecisionResponse(byte[] response) {
+	public void receiveDecisionResponse(Byte[] response) {
 		if (response != null && response.length > 0) {
 			TxnPacket pkt = TxnPacket.unpack(response);
 			writeOutput("(" + pkt.getID() + ") recieved decision response");
@@ -481,7 +481,7 @@ public class TransactionNode extends RPCNode {
 		try {
 			m = Callback.getMethod(methodName, this, parameterTypes);
 		} catch (Exception e) {
-			writeError("Could not instantiate callback");
+			writeError("Could not instantiate callback " + methodName + "(" + Arrays.toString(parameterTypes) + ")");
 			e.printStackTrace();
 			fail();
 			return null;

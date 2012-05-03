@@ -136,6 +136,25 @@ public class TxnPacket {
     }
     
     /**
+     * Unpacks a Byte array to create a RPCRequestPacket object. Assumes the
+     * array has been formatted using pack method in RPCRequestPacket.
+     * 
+     * NOTE: Exists because reflection is stupid.
+     * 
+     * @param packet
+     *            String representation of the transport packet
+     * @return TxnPacket object created or null if the byte[] representation was
+     *         corrupted
+     */
+    public static TxnPacket unpack(Byte[] data) {
+    	byte[] newData = new byte[data.length];
+    	for (int i = 0; i < data.length; i++) {
+    		newData[i] = data[i];
+    	}
+    	return unpack(newData);
+    }
+    
+    /**
      * Unpacks a byte array to create a RPCRequestPacket object. Assumes the
      * array has been formatted using pack method in RPCRequestPacket
      * 
