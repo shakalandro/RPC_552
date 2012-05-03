@@ -29,7 +29,6 @@ import edu.washington.cs.cse490h.lib.Utility;
 
 public class FacebookNode extends TransactionNode {
 	
-	private static final String COLOR_CYAN = "0;36";
 	private static final String COLOR_PURPLE = "1;35";
 	private static final String COLOR_RED = "0;31";
 	

@@ -30,7 +30,7 @@ public class RPCNode extends RIONode {
     
     /** Colors for console logging */
 	public static final boolean USE_COLORS = true;
-	private static final String COLOR_RED = "0;31";
+	private static final String COLOR_CYAN = "0;36";
 	private static final String COLOR_GREEN = "0;32";
 
 
@@ -724,7 +724,7 @@ public class RPCNode extends RIONode {
 
     private void logError(String output) {
     	if (MessageLayer.rpcLog) {
-    		log(output, System.err, COLOR_RED);
+    		log(output, System.err, COLOR_CYAN);
     	}
     }
 
