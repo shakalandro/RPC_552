@@ -103,7 +103,7 @@ public class RPCNode extends RIONode {
                 } else {
                     String filename = reader.readLine();
                     char[] buf = new char[MAX_FILE_SIZE];
-                    reader.read(buf);
+                    reader.read(buf, 0, MAX_FILE_SIZE);
                     PersistentStorageWriter writer = this.getWriter(filename,
                             false);
                     writer.write(buf);
@@ -577,7 +577,7 @@ public class RPCNode extends RIONode {
         try {
             PersistentStorageReader getter = this.getReader(filename);
             char[] buf = new char[MAX_FILE_SIZE * 2];
-            int size = getter.read(buf);
+            int size = getter.read(buf, 0, MAX_FILE_SIZE * 2);
             if (size > MAX_FILE_SIZE) {
                 logError("could not get " + filename
                         + ", file is too large to transmit.");
@@ -641,7 +641,7 @@ public class RPCNode extends RIONode {
             PersistentStorageReader reader = getReader(filename);
 
             char[] buf = new char[MAX_FILE_SIZE];
-            reader.read(buf);
+            reader.read(buf, 0, MAX_FILE_SIZE);
             String oldFileData = new String(buf);
 
             // Put old file contents into temp file
