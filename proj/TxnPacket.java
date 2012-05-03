@@ -118,7 +118,6 @@ public class TxnPacket {
     	try {
             ByteArrayOutputStream byteStream = new ByteArrayOutputStream();
             DataOutputStream out = new DataOutputStream(byteStream);
-            
             out.writeChars(txnID.toString());
             out.writeInt(protocol.ordinal());
             String addrsStr = NO_PARTICIPANTS_MARKER;
@@ -167,10 +166,11 @@ public class TxnPacket {
     	try {
             DataInputStream in = new DataInputStream(new ByteArrayInputStream(data));
 
-            byte[] uuidBytes = new byte[36];
+            byte[] uuidBytes = new byte[36 * 2];
             for (int i = 0; i < uuidBytes.length; i++) {
             	uuidBytes[i] = in.readByte();
             }
+            System.out.println(Utility.byteArrayToString(uuidBytes));
             UUID txnID = UUID.fromString(Utility.byteArrayToString(uuidBytes));
             TxnProtocol protocol = TxnProtocol.values()[in.readInt()];
             
@@ -192,9 +192,9 @@ public class TxnPacket {
             
             return new TxnPacket(txnID, protocol, addrs, request, args);
         } catch (IllegalArgumentException e) {
-            // will return null
+            e.printStackTrace();
         } catch (IOException e) {
-            // will return null
+            e.printStackTrace();
         }
         return null;
     }
@@ -203,7 +203,7 @@ public class TxnPacket {
      * String representation of a TxnPacket
      */
     public String toString() {
-        return null;
+        return request + ": " + txnID + " " + protocol;
     }
     
     public static String addrListStr(Set<Integer> addrs) {
