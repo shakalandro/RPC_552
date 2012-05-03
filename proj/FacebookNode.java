@@ -28,10 +28,10 @@ import edu.washington.cs.cse490h.lib.Utility;
  * */
 
 public class FacebookNode extends TransactionNode {
-	public static double getFailureRate() { return .01/100.0; }
+	public static double getFailureRate() { return 0/100.0; }
 	public static double getRecoveryRate() { return 100/100.0; }
-	public static double getDropRate() { return 20/100.0; }
-	public static double getDelayRate() { return 40/100.0; }
+	public static double getDropRate() { return 0/100.0; }
+	public static double getDelayRate() { return 0/100.0; }
 	
 	// The available facebook commands that can be entered by the user.
 	private static final String CREATE_COMMAND = "create";
@@ -1168,7 +1168,7 @@ public class FacebookNode extends TransactionNode {
     }
 
     public void printOutput(String output) {
-    	log(output, System.out, COLOR_PURPLE);
+    	log(output, System.out, RPCNode.COLOR_PURPLE);
     }
  
 }

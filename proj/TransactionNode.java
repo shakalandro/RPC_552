@@ -38,6 +38,8 @@ public class TransactionNode extends RPCNode {
 	private String logFile;
 	private TxnLog txnLogger;
 	
+	public static final String COLOR_DUNNO = "0;20";
+	
 	@Override
 	public void start() {
 		super.start();
@@ -124,7 +126,7 @@ public class TransactionNode extends RPCNode {
 				}
 			}
 		} catch (IOException e) {
-			logError("Could not parse transaction log during recovery.");
+			writeError("Could not parse transaction log during recovery.");
 			e.printStackTrace();
 			fail();
 		}
@@ -143,6 +145,7 @@ public class TransactionNode extends RPCNode {
 	 */
 	public void proposeTransaction(Set<Integer> participant_addrs, String request, String args) {
 		if (!participant_addrs.contains(this.addr)) {
+			writeOutput("Adding myself (" + addr + ") to txn participants");
 			participant_addrs.add(this.addr);
 		}
 		UUID txnID = UUID.randomUUID();
@@ -158,6 +161,7 @@ public class TransactionNode extends RPCNode {
 			Callback failure = createCallback("sendTxnAbort", new String[] {"java.util.UUID"},
 					new Object[] {txnID});
 			this.makeRequest(Command.TXN, txnPkt.pack(), success, failure, addr, "");
+			writeOutput("(" + txnState.txnID + ") Issuing proposal request to " + addr);
 		}
 		txnLogger.logStart(txnState);
 		// Abort the transaction if we do not hear from all participants in a timely manner
@@ -174,13 +178,14 @@ public class TransactionNode extends RPCNode {
 		TxnPacket pkt = TxnPacket.unpack(response);
 		TxnState txnState = coordinatorTxns.get(pkt.getID());
 		if (pkt.getProtocol() == TxnProtocol.TXN_ACCEPT) {
-			logOutput("Received proposal acceptance from node " + from);
+			writeOutput("(" + txnState.txnID + ") Received proposal acceptance from node " + from);
 			txnState.accept(from);
 		} else {
-			logOutput("Received proposal rejection from node " + from + ": " + pkt.getPayload());
+			writeOutput("(" + txnState.txnID + ") Received proposal rejection from node " + from + ": " + pkt.getPayload());
 			txnState.reject(from);
 		}
 		if (txnState.allVotesIn()) {
+			writeOutput("(" + txnState.txnID + ") All proposal responses recieved");
 			if (txnState.allAccepted()) {
 				txnLogger.logCommit(txnState);
 				sendTxnCommit(txnState.txnID);
@@ -198,6 +203,7 @@ public class TransactionNode extends RPCNode {
 	public void proposalTimeoutAbort(UUID txnID) {
 		TxnState txnState = coordinatorTxns.get(txnID);
 		if (!txnState.allVotesIn()) {
+			writeOutput("(" + txnState.txnID + ") timed out waiting for proposal responses");
 			sendTxnAbort(txnID);
 		}
 	}
@@ -206,11 +212,13 @@ public class TransactionNode extends RPCNode {
 	 * Notifies all participants of a commit decision.
 	 */
 	private void sendTxnCommit(UUID txnID) {
+		writeOutput("(" + txnID + ") txn committed");
 		TxnState txnState = coordinatorTxns.get(txnID);
 		for (Integer addr : txnState.participants) {
 			TxnPacket txnPkt = TxnPacket.getCommitPacket(this, txnID, txnState.request,
 					txnState.args);
 			makeRequest(Command.TXN, txnPkt.pack(), null, null, addr, "");
+			writeOutput("(" + txnID + ") sending commit message to " + addr);
 		}
 	}
 	
@@ -218,9 +226,11 @@ public class TransactionNode extends RPCNode {
 	 * Notifies all participants that accepted the proposal of an abort decision.
 	 */
 	private void sendTxnAbort(UUID txnID) {
+		writeOutput("(" + txnID + ") txn aborted");
 		for (Integer addr : coordinatorTxns.get(txnID).getAcceptors()) {
 			TxnPacket txnPkt = TxnPacket.getAbortPacket(this, txnID);
 			makeRequest(Command.TXN, txnPkt.pack(), null, null, addr, "");
+			writeOutput("(" + txnID + ") sending abort message to " + addr);
 		}
 	}
 	
@@ -255,9 +265,10 @@ public class TransactionNode extends RPCNode {
 		try {
 			UUID txnID = pkt.getID();
 			if (participantTxns.containsKey(txnID)) {
-				logError("We should not recieve a second proposal with the same ID.");
+				writeError("We should not recieve a second proposal with the same ID.");
 				fail();
 			}
+			writeOutput("(" + txnID + ") recieved proposal");
 			TxnState txnState = new TxnState(txnID, pkt.getParticipants(),
 					pkt.getRequest(), pkt.getPayload());
 			participantTxns.put(txnID, txnState);
@@ -280,13 +291,13 @@ public class TransactionNode extends RPCNode {
 				return TxnPacket.getRejectPacket(this, pkt.getID(), "rejected");
 			}
 		} catch (NoSuchMethodException e) {
-			logError("There is no handler for transaction proposal: " + request);
+			writeError("There is no handler for transaction proposal: " + request);
 			return TxnPacket.getRejectPacket(this, pkt.getID(), "No proposal handler exists.");
 		} catch (IllegalArgumentException e) {
-			logError("The proposal handler for \"" + request + "\" does not take correct parameters.");
+			writeError("The proposal handler for \"" + request + "\" does not take correct parameters.");
 			return TxnPacket.getRejectPacket(this, pkt.getID(), "Invalid proposal handler.");
 		} catch (Exception e) {
-			logError("There was an issue invoking the proposal handler for: " + request +
+			writeError("There was an issue invoking the proposal handler for: " + request +
 					"\n" + e.getMessage());
 			this.fail();
 			return null;
@@ -310,19 +321,20 @@ public class TransactionNode extends RPCNode {
 		txnState.status = TxnState.TxnStatus.COMMITTED;
 		String request = pkt.getRequest();
 		try {
+			writeOutput("(" + txnState.txnID + ") recieved commit");
 			Class<? extends TransactionNode> me = this.getClass();
 			Method handler = me.getDeclaredMethod(COMMIT_PREFIX + request, java.lang.String.class,
 					java.util.UUID.class);
 			handler.invoke(me, pkt.getPayload(), txnState.txnID);
 			txnLogger.logDone(txnState);
 		} catch (NoSuchMethodException e) {
-			logError("There is no handler for transaction commit: " + request);
+			writeError("There is no handler for transaction commit: " + request);
 			fail();
 		} catch (IllegalArgumentException e) {
-			logError("The commit handler for \"" + request + "\" does not take correct parameters.");
+			writeError("The commit handler for \"" + request + "\" does not take correct parameters.");
 			fail();
 		} catch (Exception e) {
-			logError("There was an issue invoking the commit handler for: " + request +
+			writeError("There was an issue invoking the commit handler for: " + request +
 					"\n" + e.getMessage());
 			this.fail();
 		}
@@ -345,19 +357,20 @@ public class TransactionNode extends RPCNode {
 		txnState.status = TxnState.TxnStatus.ABORTED;
 		String request = pkt.getRequest();
 		try {
+			writeOutput("(" + txnState.txnID + ") recieved abort");
 			Class<? extends TransactionNode> me = this.getClass();
 			Method handler = me.getDeclaredMethod(ABORT_PREFIX + request, java.lang.String.class,
 					java.util.UUID.class);
 			handler.invoke(me, pkt.getPayload(), txnState.txnID);
 			txnLogger.logDone(txnState);
 		} catch (NoSuchMethodException e) {
-			logError("There is no handler for transaction abort: " + request);
+			writeError("There is no handler for transaction abort: " + request);
 			fail();
 		} catch (IllegalArgumentException e) {
-			logError("The abort handler for \"" + request + "\" does not take correct parameters.");
+			writeError("The abort handler for \"" + request + "\" does not take correct parameters.");
 			fail();
 		} catch (Exception e) {
-			logError("There was an issue invoking the abort handler for: " + request +
+			writeError("There was an issue invoking the abort handler for: " + request +
 					"\n" + e.getMessage());
 			this.fail();
 		}
@@ -369,12 +382,14 @@ public class TransactionNode extends RPCNode {
 	 * Asks all transaction participants to tell this the decision status.
 	 */
 	public void sendDecisionRequest(UUID txnID) {
+		writeOutput("(" + txnID + ") starting termination protocol");
 		TxnState txnState = participantTxns.get(txnID);
 		for (Integer addr : txnState.participants) {
 			TxnPacket txnPkt = TxnPacket.getDecisionRequestPacket(this, txnID);
 			Callback success = createCallback("receiveDecisionResponse",
 					new String[] {"java.lang.byte[]"}, null);
 			makeRequest(Command.TXN, txnPkt.pack(), success, null, addr, "");
+			writeOutput("(" + txnID + ") asking " + addr + " for decision");
 		}
 		Callback decisionTimeout = createCallback("resendDecisionRequest",
 				new String[] {"java.util.UUID"}, new Object[] {txnID});
@@ -382,6 +397,7 @@ public class TransactionNode extends RPCNode {
 	}
 	
 	public void resendDecisionRequest(UUID txnID) {
+		writeOutput("(" + txnID + ") restarting termination protocol");
 		TxnState txnState = participantTxns.get(txnID);
 		if (txnState.status == TxnState.TxnStatus.WAITING) {
 			sendDecisionRequest(txnID);
@@ -395,6 +411,7 @@ public class TransactionNode extends RPCNode {
 	public void receiveDecisionResponse(byte[] response) {
 		if (response != null && response.length > 0) {
 			TxnPacket pkt = TxnPacket.unpack(response);
+			writeOutput("(" + pkt.getID() + ") recieved decision response");
 			if (pkt.getProtocol() == TxnProtocol.TXN_COMMIT) {
 				recieveTxnCommit(pkt);
 			} else if (pkt.getProtocol() == TxnProtocol.TXN_ABORT) {
@@ -409,8 +426,10 @@ public class TransactionNode extends RPCNode {
 		// respond with status if we know it
 		TxnState txnState = participantTxns.get(pkt.getID());
 		if (txnState.status == TxnState.TxnStatus.ABORTED) {
+			writeOutput("(" + txnState.txnID + ") responding to decision request with abort");
 			return TxnPacket.getAbortPacket(this, txnState.txnID);
 		} else if (txnState.status == TxnState.TxnStatus.COMMITTED) {
+			writeOutput("(" + txnState.txnID + ") responding to decision request with commit");
 			return TxnPacket.getCommitPacket(this, txnState.txnID, txnState.request, txnState.args);
 		}
 		// Return null to RPC layer if we don't know what happened.
@@ -446,7 +465,7 @@ public class TransactionNode extends RPCNode {
     			}
     			break;
     		default:
-    			logError("Unknown transaction control message: " + protocol);
+    			writeError("Unknown transaction control message: " + protocol);
     		}
     		
         	return RPCResultPacket.getPacket(this, this.addr, Status.SUCCESS, result);
@@ -462,13 +481,21 @@ public class TransactionNode extends RPCNode {
 		try {
 			m = Callback.getMethod(methodName, this, parameterTypes);
 		} catch (Exception e) {
-			logError("Could not instantiate callback");
+			writeError("Could not instantiate callback");
 			e.printStackTrace();
 			fail();
 			return null;
 		}
 		return new Callback(m, this, params);
 	}
+	
+	public void writeError(String output) {
+    	log(output, System.err, COLOR_DUNNO);
+    }
+
+    public void writeOutput(String output) {
+    	log(output, System.out, COLOR_DUNNO);
+    }
 	
 	/*
 	 * Helper class that handles writing to the transaction log.
@@ -498,7 +525,7 @@ public class TransactionNode extends RPCNode {
 				this.writer = node.getWriter(filename, true);
 				this.node = node;
 			} catch (IOException e) {
-				node.logError("Could not open read or write to transaction log: " + filename);
+				node.writeError("Could not open read or write to transaction log: " + filename);
 				node.fail();
 			}
 		}
@@ -507,7 +534,7 @@ public class TransactionNode extends RPCNode {
 			try {
 				writer.append(r.msg + " " + data + "\n");
 			} catch (IOException e) {
-				node.logError("Could not write to log file.");
+				node.writeError("Could not write to log file.");
 				node.fail();
 			}
 		}
