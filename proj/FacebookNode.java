@@ -148,14 +148,14 @@ public class FacebookNode extends TransactionNode {
 		}
 		
 		if (!commandScanner.hasNext()) {
-			System.err.println("No command given.");
+			printError("No command given.");
 			return;
 		}
 
 		String commandName = commandScanner.next();
 		if (commandName.equals(CREATE_COMMAND)) {
 			if (!commandScanner.hasNext()) {
-				System.err.println("Usage: create user_name\nUser names must be a single word.");
+				printError("Usage: create user_name\nUser names must be a single word.");
 				return;
 			}
 
@@ -164,20 +164,20 @@ public class FacebookNode extends TransactionNode {
 			// Check to make sure that the user name is only one word. This will help not confuse
 			// users.
 			if (commandScanner.hasNext()) {
-				System.err.println("Usage: create user_name\nUser names must be a single word.");
+				printError("Usage: create user_name\nUser names must be a single word.");
 				return;
 			}
 
 			try {
 				createNewUser(userName);
 			} catch (Exception e) {
-				System.err.println("Exception: " + e.toString());
+				printError("Exception: " + e.toString());
 			}
 		}
 
 		else if (commandName.equals(LOGIN_COMMAND)) {
 			if (!commandScanner.hasNext()) {
-				System.err.println("Usage: login user_name");
+				printError("Usage: login user_name");
 				return;
 			}
 			String userName = commandScanner.next();
@@ -195,7 +195,7 @@ public class FacebookNode extends TransactionNode {
 
 		else if (commandName.equals(FRIEND_COMMAND)) {
 			if (!commandScanner.hasNext()) {
-				System.err.println("Usage: friend user_name");
+				printError("Usage: friend user_name");
 				return;
 			}
 			String userName = commandScanner.next();
@@ -218,7 +218,7 @@ public class FacebookNode extends TransactionNode {
 
 		else if (commandName.equals(ACCEPT_COMMAND)) {
 			if (!commandScanner.hasNext()) {
-				System.err.println("Usage: accept user_name");
+				printError("Usage: accept user_name");
 				return;
 			}
 
@@ -232,7 +232,7 @@ public class FacebookNode extends TransactionNode {
 
 		else if (commandName.equals(MESSAGE_COMMAND)) {
 			if (!commandScanner.hasNext()) {
-				System.err.println("Usage: post message_contents");
+				printError("Usage: post message_contents");
 				return;
 			}
 			
@@ -276,7 +276,7 @@ public class FacebookNode extends TransactionNode {
 		}
 
 		else {
-			System.err.println("Unrecognized command.");
+			printError("Unrecognized command.");
 		}
 	}
 
