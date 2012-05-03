@@ -550,7 +550,7 @@ public class RPCNode extends RIONode {
 	                    + request);
 	            result = RPCResultPacket.getPacket(this, pkt.getRequestID(),
 	                    Status.UNKNOWN_REQUEST,
-	                    Utility.stringToByteArray(mySessionID + ""));;
+	                    Utility.stringToByteArray(mySessionID + ""));
 	        }
 	    }
 	    return result;
