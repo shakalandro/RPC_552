@@ -14,43 +14,41 @@ import edu.washington.cs.cse490h.lib.PersistentStorageWriter;
 import edu.washington.cs.cse490h.lib.Utility;
 
 /*
- * This class provides RPC functionality. It is the implementation of client and
+ * This class provides RPC functionality, including implementation of client and
  * server stubs and handlers as well as the file commands that are provider to
  * users.
  * 
  * @author Jenny Abrahamson
  */
 public class RPCNode extends RIONode {
-	 
-    public static double getFailureRate() {
-        return MessageLayer.rpcFail / 100.0;
-    }
 
-    public static double getRecoveryRate() {
-        return MessageLayer.rpcRecover / 100.0;
-    }
-
-    public static double getDropRate() {
-        return MessageLayer.rpcDrop / 100.0;
-    }
-
-    public static double getDelayRate() {
-        return MessageLayer.rpcDelay / 100.0;
-    }
+	/** Set failure/recovery/delay/drop rates based on command line options, default == 0% */
+    public static double getFailureRate() { return MessageLayer.rpcFail / 100.0; }
+    public static double getRecoveryRate() { return MessageLayer.rpcRecover / 100.0; }
+    public static double getDropRate() { return MessageLayer.rpcDrop / 100.0; }
+    public static double getDelayRate() { return MessageLayer.rpcDelay / 100.0; }
     
-	public static final String COLOR_PURPLE = "1;35";
-	public static final String COLOR_BLUE = "0;34";
-	public static final String COLOR_RED = "0;31";
-	public static final String COLOR_CYAN = "0;36";
-	public static final String COLOR_GREEN = "0;32";
- 
+    /** Colors for console logging */
 	public static final boolean USE_COLORS = true;
+	private static final String COLOR_RED = "0;31";
+	private static final String COLOR_GREEN = "0;32";
 
+
+	// ------------ SERVER VARIABLES ------------ //
+	
     // Session ID -- on start up, Servers initialize this value using the
     // current time. Client invoke an RPC call to fetch this value from the
     // server
     private int mySessionID;
-
+    
+    // Map for servers from client id to last computed result
+    private Map<Integer, RPCResultPacket> storedResults;
+    
+    // Name of temp file used by put commands
+    private final String TEMP_PUT_FILE = ".temp_put_file";
+    
+    // ------------ CLIENT VARIABLES ------------ //
+    
     // Counter for the next available request id -- used only by the client
     private int requestID;
 
@@ -58,19 +56,59 @@ public class RPCNode extends RIONode {
     // request at a time)
     private Queue<RPCRequest> requestQueue;
     
-    // Map for clients from server id to current session id
+    // Map from server id to current session id
     private Map<Integer, Integer> serverSessionIDs;
-
+    
+    // ------------------------------------------- //
+	
     // Number of steps to wait before re-sending requests
     public static final int TIMEOUT_INTERVAL = 10;
-    
-    // Map for servers from client id to last computed result
-    private Map<Integer, RPCResultPacket> storedResults;
 
+    // Max file size for RPC layer
     protected final int MAX_FILE_SIZE = Math
             .min(RPCRequestPacket.MAX_PAYLOAD_SIZE,
                     RPCResultPacket.MAX_PAYLOAD_SIZE);
-    private final String TEMP_PUT_FILE = ".temp_put_file";
+    
+    @Override
+    public void start() {
+        if (this.isServer()) {
+            // If server, need to initialize a new session id
+            mySessionID = (int) System.currentTimeMillis();
+            storedResults = new HashMap<Integer, RPCResultPacket>();
+            
+            // Recover from a failed put
+            if (Utility.fileExists(this, TEMP_PUT_FILE)) {
+                try {
+                    PersistentStorageReader reader = this.getReader(TEMP_PUT_FILE);
+                    if (!reader.ready()) {
+                        PersistentStorageWriter deleter = this.getWriter(
+                                TEMP_PUT_FILE, false);
+                        deleter.delete();
+                    } else {
+                        String filename = reader.readLine();
+                        char[] buf = new char[MAX_FILE_SIZE];
+                        reader.read(buf, 0, MAX_FILE_SIZE);
+                        PersistentStorageWriter writer = this.getWriter(filename,
+                                false);
+                        writer.write(buf);
+
+                        // delete temp file
+                        PersistentStorageWriter deleter = this.getWriter(filename,
+                                false);
+                        deleter.delete();
+                    }
+                } catch (IOException e) {
+                    // fail ourselves and try again
+                	logError("Could not recover log file for put, failing now.");
+                    fail();
+                }
+            }
+        } else {
+            requestID = 0;
+            requestQueue = new LinkedList<RPCRequest>();
+            serverSessionIDs = new HashMap<Integer, Integer>();
+        }
+    }
     
     /**
      * Server nodes, by convention, have even address ids.
@@ -79,46 +117,6 @@ public class RPCNode extends RIONode {
      */
     public boolean isServer() {
     	return addr % 2 == 0;
-    }
-    @Override
-    public void start() {
-        if (this.isServer()) {
-            // If server, need to initialize a new session id
-            mySessionID = (int) System.currentTimeMillis();
-            storedResults = new HashMap<Integer, RPCResultPacket>();
-        } else {
-            requestID = 0;
-            requestQueue = new LinkedList<RPCRequest>();
-            serverSessionIDs = new HashMap<Integer, Integer>();
-        }
-
-        // Recover from a failed put
-        if (Utility.fileExists(this, TEMP_PUT_FILE)) {
-            try {
-                PersistentStorageReader reader = this.getReader(TEMP_PUT_FILE);
-                if (!reader.ready()) {
-                    PersistentStorageWriter deleter = this.getWriter(
-                            TEMP_PUT_FILE, false);
-                    deleter.delete();
-                } else {
-                    String filename = reader.readLine();
-                    char[] buf = new char[MAX_FILE_SIZE];
-                    reader.read(buf, 0, MAX_FILE_SIZE);
-                    PersistentStorageWriter writer = this.getWriter(filename,
-                            false);
-                    writer.write(buf);
-
-                    // delete temp file
-                    PersistentStorageWriter deleter = this.getWriter(filename,
-                            false);
-                    deleter.delete();
-                }
-            } catch (IOException e) {
-                // fail ourselves and try again
-            	logError("Could not recover log file for put, failing now.");
-                fail();
-            }
-        }
     }
 
     /**
@@ -163,7 +161,6 @@ public class RPCNode extends RIONode {
      */
     @Override
     public void onRIOReceive(Integer from, int protocol, byte[] msg) {
-
         if (protocol == Protocol.RPC_REQUEST_PKT) {
             RPCRequestPacket pkt = RPCRequestPacket.unpack(msg);
             logOutput("JUST RECEIVED: " + pkt.toString());
@@ -173,14 +170,12 @@ public class RPCNode extends RIONode {
             logOutput("JUST RECEIVED: " + pkt.toString());
             handleRPCresult(from, pkt);
         } else {
-            // logError("unknown protocol: " + protocol);
+            logError("unknown protocol: " + protocol);
             return;
         }
     }
 
-    // /////////////////////////////
-    // CLIENT STUBS
-    // /////////////////////////////
+    // ------------ CLIENT STUBS ------------ //
 
     /* Creates the file filename on server serverAddr */
     public void create(int serverAddr, String filename) {
@@ -257,9 +252,7 @@ public class RPCNode extends RIONode {
                 filename);
     }
 
-    // /////////////////////////////
-    // CLIENT SIDE RPC HANDLER CODE
-    // /////////////////////////////
+    // ------------ CLIENT RPC HANDLER CODE ------------ //
 
     /**
      * Adds an RPC request to the client's queue of requests. Sends the request
@@ -341,11 +334,11 @@ public class RPCNode extends RIONode {
      * @param request
      */
     private void send(RPCRequest request) {
-        RPCRequestPacket pkt = request.getPacket();
+        RPCRequestPacket pkt = request.pckt;
         
-        pkt.setServerSessionID(serverSessionIDs.get(request.getServerAddr()));
+        pkt.setServerSessionID(serverSessionIDs.get(request.serverAddr));
 
-        RIOSend(request.getServerAddr(), Protocol.RPC_REQUEST_PKT,
+        RIOSend(request.serverAddr, Protocol.RPC_REQUEST_PKT,
                 pkt.pack());
 
         // Set timeout to retry this method in TIMEOUT steps, will trigger
@@ -378,13 +371,13 @@ public class RPCNode extends RIONode {
         RPCRequest request = requestQueue.peek();
 
         if (request == null
-                || pkt.getRequestID() != request.getPacket().getRequestID()) {
+                || pkt.getRequestID() != request.pckt.getRequestID()) {
             // This reply is not for the current request, let's ignore it
             return;
         }
 
         Status status = pkt.getStatus();
-        Command requestType = request.getPacket().getRequest();
+        Command requestType = request.pckt.getRequest();
 
         // First handle session requests -- if successful, set serverSessionID
         // and move on to next request, else must make session request again
@@ -399,12 +392,12 @@ public class RPCNode extends RIONode {
             Callback callback;
 
             if (status == Status.SUCCESS) {
-                callback = request.getSuccess();
+                callback = request.success;
 
                 // Log success message
                 logOutput("Successfully completed: " + requestType
-                        + " on server " + request.getServerAddr()
-                        + " and file " + request.getFilename());
+                        + " on server " + request.serverAddr
+                        + " and file " + request.filename);
                 
 
                 // If GET command result, print contents of file to console
@@ -425,11 +418,11 @@ public class RPCNode extends RIONode {
                             .byteArrayToString(pkt.getPayload())));
                 }
 
-                callback = request.getFailure();
+                callback = request.failure;
                 // Log that error occurred
                 logError("Error: " + requestType + " on server "
-                        + request.getServerAddr() + " and file "
-                        + request.getFilename() + " returned error code "
+                        + request.serverAddr + " and file "
+                        + request.filename + " returned error code "
                         + status.getMsg());
                 if (callback != null) {
                     Object[] params = callback.getParams();
@@ -456,9 +449,7 @@ public class RPCNode extends RIONode {
         sendNextRequest();
     }
 
-    // /////////////////////////////
-    // SERVER SIDE RPC HANDLER CODE
-    // /////////////////////////////
+    // ------------ SERVER HANDLER CODE ------------ //
 
     /*
      * Server receives an RPC request.
@@ -473,7 +464,6 @@ public class RPCNode extends RIONode {
      * 
      * 4. Otherwise process the new request
      */
-
     protected void handleRPCrequest(Integer from, RPCRequestPacket pkt) {
     	if (!storedResults.containsKey(from)) {
     		storedResults.put(from, null);
@@ -550,15 +540,13 @@ public class RPCNode extends RIONode {
 	                    + request);
 	            result = RPCResultPacket.getPacket(this, pkt.getRequestID(),
 	                    Status.UNKNOWN_REQUEST,
-	                    Utility.stringToByteArray(mySessionID + ""));;
+	                    Utility.stringToByteArray(mySessionID + ""));
 	        }
 	    }
 	    return result;
     }
 
-    // /////////////////////////////
-    // SERVER HANDLERS
-    // /////////////////////////////
+    // ------------ SERVER HANDLER IMPLEMENTATIONS ------------ //
 
     /**
      * Gets and returns the contents of filename.
@@ -744,17 +732,15 @@ public class RPCNode extends RIONode {
         }
     }
 
-    // //////////
-    // MISC
-    // //////////
+    // ------------ LOGGING ------------ //
 
-    protected void logError(String output) {
+    private void logError(String output) {
     	if (MessageLayer.rpcLog) {
     		log(output, System.err, COLOR_RED);
     	}
     }
 
-    protected void logOutput(String output) {
+    private void logOutput(String output) {
     	if (MessageLayer.rpcLog) {
     		log(output, System.out, COLOR_GREEN);
     	}
