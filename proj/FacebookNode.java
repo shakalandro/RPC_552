@@ -31,6 +31,7 @@ public class FacebookNode extends TransactionNode {
 	
 	private static final String COLOR_CYAN = "0;36";
 	private static final String COLOR_PURPLE = "1;35";
+	private static final String COLOR_RED = "0;31";
 	
 	// The available facebook commands that can be entered by the user.
 	private static final String CREATE_COMMAND = "create";
@@ -1162,7 +1163,7 @@ public class FacebookNode extends TransactionNode {
 	}
 	
     protected void printError(String output) {
-    	log(output, System.err, COLOR_CYAN);
+    	log(output, System.err, COLOR_RED);
     }
 
     protected void printOutput(String output) {
