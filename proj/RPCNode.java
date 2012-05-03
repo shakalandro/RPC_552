@@ -748,13 +748,13 @@ public class RPCNode extends RIONode {
     // MISC
     // //////////
 
-    protected void logError(String output) {
+    private void logError(String output) {
     	if (MessageLayer.rpcLog) {
     		log(output, System.err, COLOR_RED);
     	}
     }
 
-    protected void logOutput(String output) {
+    private void logOutput(String output) {
     	if (MessageLayer.rpcLog) {
     		log(output, System.out, COLOR_GREEN);
     	}

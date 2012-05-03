@@ -66,7 +66,6 @@ public class FacebookNode extends TransactionNode {
 	// The number of servers we'll have on the system. By convention, they have even numbered id's
 	// starting at 0. Also by convention, the .users file is stored on server 0.
 	private static final int NUM_SERVERS = 3;
-	private static final int SERVER_START_ID = 0;
 	private static final int ALL_USERS_LOCATION = 0;
 
 	// Name of the file, stored on the client machine, that specifies the names of each user and the id of the
@@ -868,7 +867,7 @@ public class FacebookNode extends TransactionNode {
 		get(userDataLocations.get(loggedInUser), filename, addToWallsCallback, tryAgainCallback);
 	}
 
-	public void addMessageToAllWalls(String friendList, String message) throws SecurityException, ClassNotFoundException, NoSuchMethodException, IllegalAccessException, InvocationTargetException {
+	public void addMessageToAllWalls(String friendList, String message) throws SecurityException {
 		// Get a non-duped set of all of my friends.
 		Set<String> friends = new HashSet<String>();
 		Scanner friendScanner = new Scanner(friendList);
@@ -1164,7 +1163,7 @@ public class FacebookNode extends TransactionNode {
 	}
 	
     public void printError(String output) {
-    	log(output, System.err, RPCNode.COLOR_CYAN);
+    	log(output, System.err, COLOR_CYAN);
     }
 
     public void printOutput(String output) {
