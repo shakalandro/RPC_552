@@ -44,7 +44,8 @@ public class PersistentStorageReader extends BufferedReader {
     
     @Override
     public int read(char[] buf) throws IOException {
-    	assert(false);
-		return 0;
+    	int numChars = super.read(buf);
+        n.handleDiskReadEvent("read: " + Utility.logEscape("" + numChars));
+        return numChars;
     }
 }

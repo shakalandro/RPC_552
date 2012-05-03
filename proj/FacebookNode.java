@@ -726,6 +726,8 @@ public class FacebookNode extends TransactionNode {
 	 */
 	public void commitWallPost(UUID txnId, String args) throws IOException {
 		Object[] objArgs = parseArgs(args);
+		
+		@SuppressWarnings("unchecked")
 		List<String> nameList = (List<String>) objArgs[0];
 		String message = (String) objArgs[1];
 		
@@ -815,6 +817,8 @@ public class FacebookNode extends TransactionNode {
 			// Since we already have the friend list and such, we can actually skip ahead and
 			// use the info we already have without having to do a GET for the friend list.
 			Object[] info = parseArgs(args);
+			
+			@SuppressWarnings("unchecked")
 			List<String> friends = (List<String>) info[0];
 			String friendString = StringUtils.join(friends, ' ');
 			String message = (String) info[1];
