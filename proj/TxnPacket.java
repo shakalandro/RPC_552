@@ -120,13 +120,13 @@ public class TxnPacket {
     	try {
             ByteArrayOutputStream byteStream = new ByteArrayOutputStream();
             DataOutputStream out = new DataOutputStream(byteStream);
-            out.writeChars(txnID.toString());
+            out.write(txnID.toString().getBytes());
             out.writeInt(protocol.ordinal());
             String addrsStr = NO_PARTICIPANTS_MARKER;
             if (participants != null && participants.size() > 0) {
             	addrsStr = TxnPacket.addrListStr(participants);
             }
-            out.writeChars(addrsStr + " " + request + " " + payload);
+            out.write(Utility.stringToByteArray(addrsStr + " " + request + " " + payload));
 
             out.flush();
             out.close();
@@ -168,12 +168,12 @@ public class TxnPacket {
     	try {
             DataInputStream in = new DataInputStream(new ByteArrayInputStream(data));
 
-            byte[] uuidBytes = new byte[36 * 2];
+            byte[] uuidBytes = new byte[36];
             for (int i = 0; i < uuidBytes.length; i++) {
             	uuidBytes[i] = in.readByte();
             }
-            System.out.println(Utility.byteArrayToString(uuidBytes));
-            UUID txnID = UUID.fromString(Utility.byteArrayToString(uuidBytes));
+            String uuidStr = new String(uuidBytes);
+            UUID txnID = UUID.fromString(uuidStr);
             TxnProtocol protocol = TxnProtocol.values()[in.readInt()];
             
             byte[] theRestBytes = new byte[in.available()];
