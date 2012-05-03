@@ -1077,9 +1077,9 @@ public class FacebookNode extends TransactionNode {
 	// Prints out a de-duped list of all friend requests that the current user has.
 	public void showAllOfList(Integer errorCode, String filename, Integer serverId) throws SecurityException, ClassNotFoundException, NoSuchMethodException {
 		// Create a callback to try again in the case of failure.
-		String[] failParamTypes = { "java.lang.Integer", "java.lang.String" };
+		String[] failParamTypes = { "java.lang.Integer", "java.lang.String", "java.lang.Integer" };
 		Method tryAgain = Callback.getMethod("showAllOfList", this, failParamTypes);
-		Object[] failParams = { null, filename };
+		Object[] failParams = { null, filename, serverId };
 		Callback tryAgainCallback = new Callback(tryAgain, this, failParams);
 
 		// Create a callback to print the results once we've got 'em.
