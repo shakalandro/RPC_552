@@ -28,10 +28,10 @@ import edu.washington.cs.cse490h.lib.Utility;
  * */
 
 public class FacebookNode extends TransactionNode {
-	public static double getFailureRate() { return .01/100.0; }
+	public static double getFailureRate() { return 0/100.0; }
 	public static double getRecoveryRate() { return 100/100.0; }
 	public static double getDropRate() { return 20/100.0; }
-	public static double getDelayRate() { return 40/100.0; }
+	public static double getDelayRate() { return 30/100.0; }
 	
 	// The available facebook commands that can be entered by the user.
 	private static final String CREATE_COMMAND = "create";
@@ -103,6 +103,7 @@ public class FacebookNode extends TransactionNode {
 		if (errorCode != null && errorCode.equals(FILE_NO_EXIST)) {
 			nextServer = 0;
 			userDataLocations = new HashMap<String, Integer>();
+			printOutput("Client Node Initialized and Accepting Your Commands!");
 			return;
 		}
 
@@ -132,6 +133,8 @@ public class FacebookNode extends TransactionNode {
 		// The next server that we'll use when storing the meta-dta for a new user will be the next server in the round-robin
 		// distribution.
 		nextServer = currentServer;
+		
+		printOutput("Client Node Initialized and Accepting Your Commands!");
 	}
 	
 	@Override
@@ -1142,12 +1145,12 @@ public class FacebookNode extends TransactionNode {
 			Callback userExistsCallback, Callback userNoExistsCallback) throws SecurityException, ClassNotFoundException, NoSuchMethodException {
 		// Create a failure callback that just calls this method again.
 		String[] failParamTypes =
-				{ "java.lang.Integer", "java.lang.String", "java.lang.String",
+				{ "java.lang.Integer", "java.lang.String", "java.lang.String", "java.lang.Integer",
 						"edu.washington.cs.cse490h.lib.Callback",
 						"edu.washington.cs.cse490h.lib.Callback" };
 		Method tryAgain = Callback.getMethod("checkForNameInList", this, failParamTypes);
 		Object[] failParams =
-				{ null, userName, filename, userExistsCallback, userNoExistsCallback };
+				{ null, userName, filename, null, userExistsCallback, userNoExistsCallback };
 		Callback tryAgainCallback = new Callback(tryAgain, this, failParams);
 
 		// Create a success callback that checks the retrieved file for userName;
