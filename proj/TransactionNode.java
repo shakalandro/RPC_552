@@ -274,9 +274,9 @@ public class TransactionNode extends RPCNode {
 					pkt.getRequest(), pkt.getPayload());
 			participantTxns.put(txnID, txnState);
 			Class<? extends TransactionNode> me = this.getClass();
-			Method handler = me.getDeclaredMethod(PROPOSAL_PREFIX + request, java.lang.String.class,
-					java.util.UUID.class);
-			Boolean accept = (Boolean)handler.invoke(me, pkt.getPayload(), txnState.txnID);
+			Method handler = me.getDeclaredMethod(PROPOSAL_PREFIX + request, java.util.UUID.class,
+					java.lang.String.class);
+			Boolean accept = (Boolean)handler.invoke(this, txnState.txnID, pkt.getPayload());
 			if (accept) {
 				txnLogger.logAccept(txnState);
 				txnState.status = TxnState.TxnStatus.WAITING;
@@ -292,12 +292,15 @@ public class TransactionNode extends RPCNode {
 				return TxnPacket.getRejectPacket(this, pkt.getID(), "rejected");
 			}
 		} catch (NoSuchMethodException e) {
+			e.printStackTrace();
 			writeError("There is no handler for transaction proposal: " + request);
 			return TxnPacket.getRejectPacket(this, pkt.getID(), "No proposal handler exists.");
 		} catch (IllegalArgumentException e) {
+			e.printStackTrace();
 			writeError("The proposal handler for \"" + request + "\" does not take correct parameters.");
 			return TxnPacket.getRejectPacket(this, pkt.getID(), "Invalid proposal handler.");
 		} catch (Exception e) {
+			e.printStackTrace();
 			writeError("There was an issue invoking the proposal handler for: " + request +
 					"\n" + e.getMessage());
 			this.fail();
@@ -324,9 +327,9 @@ public class TransactionNode extends RPCNode {
 		try {
 			writeOutput("(" + txnState.txnID + ") recieved commit");
 			Class<? extends TransactionNode> me = this.getClass();
-			Method handler = me.getDeclaredMethod(COMMIT_PREFIX + request, java.lang.String.class,
-					java.util.UUID.class);
-			handler.invoke(me, pkt.getPayload(), txnState.txnID);
+			Method handler = me.getDeclaredMethod(COMMIT_PREFIX + request, java.util.UUID.class,
+					java.lang.String.class);
+			handler.invoke(this, txnState.txnID, pkt.getPayload());
 			txnLogger.logDone(txnState);
 		} catch (NoSuchMethodException e) {
 			writeError("There is no handler for transaction commit: " + request);
@@ -360,9 +363,9 @@ public class TransactionNode extends RPCNode {
 		try {
 			writeOutput("(" + txnState.txnID + ") recieved abort");
 			Class<? extends TransactionNode> me = this.getClass();
-			Method handler = me.getDeclaredMethod(ABORT_PREFIX + request, java.lang.String.class,
-					java.util.UUID.class);
-			handler.invoke(me, pkt.getPayload(), txnState.txnID);
+			Method handler = me.getDeclaredMethod(ABORT_PREFIX + request, java.util.UUID.class,
+					java.lang.String.class);
+			handler.invoke(this, txnState.txnID, pkt.getPayload());
 			txnLogger.logDone(txnState);
 		} catch (NoSuchMethodException e) {
 			writeError("There is no handler for transaction abort: " + request);
