@@ -1,6 +1,10 @@
 import java.io.IOException;
 import java.lang.reflect.Method;
-import java.util.*;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
 
 import edu.washington.cs.cse490h.lib.Callback;
 import edu.washington.cs.cse490h.lib.PersistentStorageReader;
@@ -388,12 +392,12 @@ public class TransactionNode extends RPCNode {
 	public void sendDecisionRequest(UUID txnID) {
 		writeOutput("(" + txnID + ") starting termination protocol");
 		TxnState txnState = participantTxns.get(txnID);
-		for (Integer addr : txnState.participants) {
+		for (Integer otherAddr : txnState.participants) {
 			TxnPacket txnPkt = TxnPacket.getDecisionRequestPacket(this, txnID);
 			Callback success = createCallback("receiveDecisionResponse",
 					new String[] {Byte[].class.getName()}, null);
-			makeRequest(Command.TXN, txnPkt.pack(), success, null, addr, "");
-			writeOutput("(" + txnID + ") asking " + addr + " for decision");
+			makeRequest(Command.TXN, txnPkt.pack(), success, null, otherAddr, "");
+			writeOutput("(" + txnID + ") asking " + otherAddr + " for decision");
 		}
 		Callback decisionTimeout = createCallback("resendDecisionRequest",
 				new String[] {UUID.class.getName()}, new Object[] {txnID});
@@ -473,10 +477,9 @@ public class TransactionNode extends RPCNode {
     			writeError("Unknown transaction control message: " + protocol);
     		}
     		
-        	return RPCResultPacket.getPacket(this, this.addr, Status.SUCCESS, result);
-        } else {
-        	return super.handleRPCCommand(request, senderAddr, pkt);
+        	return RPCResultPacket.getPacket(this, pkt.getRequestID(), Status.SUCCESS, result);
         }
+        return super.handleRPCCommand(request, senderAddr, pkt);
 	}
 	
 	////////////////////////////////// Helper Code //////////////////////////////////////////////
