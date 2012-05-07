@@ -37,7 +37,11 @@ public class Callback {
     public Callback(Method method, Object obj, Object[] params) {
         this.method = method;
         this.obj = obj;
-        this.params = params;
+        if (params == null) {
+        	this.params = new Object[method.getParameterTypes().length];
+        } else {
+        	this.params = params;
+        }
     }
 
     /**

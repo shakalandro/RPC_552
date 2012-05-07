@@ -13,6 +13,8 @@ import java.util.Scanner;
 import java.util.Set;
 import java.util.UUID;
 
+import javax.rmi.CORBA.Util;
+
 import org.apache.commons.lang.StringUtils;
 
 import edu.washington.cs.cse490h.lib.Callback;
@@ -110,14 +112,15 @@ public class FacebookNode extends TransactionNode {
 		// repeat this method.
 		// If we succeed, then we need to go on to a method that reads the contents of the file and
 		// populates the meta-data fields correctly.
-		String[] goodParamTypes = { "java.lang.String" };
-		Object[] p = { null };
+		String[] goodParamTypes = { Integer.class.getName(), byte[].class.getName() };
+		Object[] p = { null, null };
 		Callback goodCallback = createCallback("populateDataInfo", goodParamTypes, p);
 		get(ALL_USERS_LOCATION, ALL_USERS_FILE, goodCallback, tryAgainCallback);
 	}
 
 	// Adds mappings from user's to the servers that are storing their data into our local storage.
-	public void populateDataInfo(String usersFile) {
+	public void populateDataInfo(Integer from, byte[] result) {
+		String usersFile = Utility.byteArrayToString(result);
 		int currentServer = 0;
 		userDataLocations = new HashMap<String, Integer>();
 		Scanner fileReader = new Scanner(usersFile);
@@ -322,7 +325,7 @@ public class FacebookNode extends TransactionNode {
 
 		// If we failed because the .users file doesn't exist, then we must create it.
 		if (errorCode != null && errorCode.equals(FILE_NO_EXIST)) {
-			//logOutput(".user file doesn't exist. Creating now.");
+			printOutput(".user file doesn't exist. Creating now.");
 			createUsersFile(null, userNoExistsCallback);
 			return;
 		}
@@ -344,8 +347,8 @@ public class FacebookNode extends TransactionNode {
 		// If we succeed, then we need to go on to a method that reads the contents of the file and
 		// then fires off the appropriate callback.
 		String[] pTypes =
-				{ "java.lang.String", "java.lang.String", "edu.washington.cs.cse490h.lib.Callback",
-						"edu.washington.cs.cse490h.lib.Callback" };
+				{ Integer.class.getName(), byte[].class.getName(), String.class.getName(),
+				Callback.class.getName(), Callback.class.getName() };
 		Method checkForName = Callback.getMethod("checkFileForName", this, pTypes);
 		Object[] p = { null, userName, userExistsCallback, userNoExistsCallback };
 		Callback checkForNameCallback = new Callback(checkForName, this, p);
@@ -397,7 +400,7 @@ public class FacebookNode extends TransactionNode {
 		// exists.
 		// If so, we can just move on to making the friends file.
 		if (errorCode != null && errorCode.equals(FILE_EXISTS)) {
-			createFriendsFile(null, userName);
+			createFriendsFile(null, null, userName);
 			return;
 		}
 		
@@ -408,73 +411,80 @@ public class FacebookNode extends TransactionNode {
 		Callback tryAgainCallback = new Callback(tryAgain, this, failParams);
 
 		// Create a success callback that forwards control to creating the friends file.
-		String[] successParamTypes = { "java.lang.Integer", "java.lang.String" };
+		String[] successParamTypes = { Integer.class.getName(), byte[].class.getName(),
+				String.class.getName() };
 		Method makeFriendsFile = Callback.getMethod("createFriendsFile", this, successParamTypes);
-		Object[] successParams = { null, userName };
+		Object[] successParams = { null, null, userName };
 		Callback successCallback = new Callback(makeFriendsFile, this, successParams);
 
 		// Invoke the create RPC call.
 		String filename = MESSAGES_PREFIX + userName;
 		create(userDataLocations.get(userName), filename, successCallback, tryAgainCallback);
 	}
-
-	public void createFriendsFile(Integer errorCode, String userName) throws SecurityException, ClassNotFoundException, NoSuchMethodException {
-
+	
+	public void recreateFriendsFile(Integer errorCode, String userName) throws SecurityException, ClassNotFoundException, NoSuchMethodException {
 		// If we're calling because we failed, check if the failure is because the file already
 		// exists.
 		// If so, we can just move on to making the requests file.
 		if (errorCode != null && errorCode.equals(FILE_EXISTS)) {
-			createRequestsFile(null, userName);
+			createRequestsFile(null, null, userName);
 			return;
 		}
+		createFriendsFile(null, null, userName);
+	}
+
+	public void createFriendsFile(Integer from, byte[] result, String userName) throws SecurityException, ClassNotFoundException, NoSuchMethodException {
 
 		// Create a failure callback that just tries this method once-more.
-		String[] failParamTypes = { "java.lang.Integer", "java.lang.String" };
-		Method tryAgain = Callback.getMethod("createFriendsFile", this, failParamTypes);
+		String[] failParamTypes = { Integer.class.getName(), String.class.getName() };
+		Method tryAgain = Callback.getMethod("recreateFriendsFile", this, failParamTypes);
 		Object[] failParams = { null, userName };
 		Callback tryAgainCallback = new Callback(tryAgain, this, failParams);
 
 		// Create a success callback that forwards control to creating the requets file.
-		String[] successParamTypes = { "java.lang.Integer", "java.lang.String" };
+		String[] successParamTypes = { Integer.class.getName(), byte[].class.getName(),
+				String.class.getName() };
 		Method makeFriendsFile = Callback.getMethod("createRequestsFile", this, successParamTypes);
-		Object[] successParams = { null, userName };
+		Object[] successParams = { null, null, userName };
 		Callback successCallback = new Callback(makeFriendsFile, this, successParams);
 
 		// Invoke the create RPC call.
 		String filename = FRIENDS_PREFIX + userName;
 		create(userDataLocations.get(userName), filename, successCallback, tryAgainCallback);
 	}
-
-	public void createRequestsFile(Integer errorCode, String userName) throws SecurityException, ClassNotFoundException, NoSuchMethodException {
+	
+	public void recreateRequestsFile(Integer errorCode, String userName) throws SecurityException, ClassNotFoundException, NoSuchMethodException {
 		// If we're calling because we failed, check if the failure is because the file already
 		// exists.
 		// If so, we can just move on to appending the name to the list of existing users.
 		if (errorCode != null && errorCode.equals(FILE_EXISTS)) {
-			addUserToList(null, userName);
+			addUserToList(null, null, userName);
 			return;
 		}
+		createRequestsFile(null, null, userName);
+	}
 
+	public void createRequestsFile(Integer from, byte[] result, String userName) throws SecurityException, ClassNotFoundException, NoSuchMethodException {
 		// Create a failure callback that just tries this method once-more.
 		String[] failParamTypes = { "java.lang.Integer", "java.lang.String" };
-		Method tryAgain = Callback.getMethod("createRequestsFile", this, failParamTypes);
+		Method tryAgain = Callback.getMethod("recreateRequestsFile", this, failParamTypes);
 		Object[] failParams = { null, userName };
 		Callback tryAgainCallback = new Callback(tryAgain, this, failParams);
 
 		// Create a success callback that forwards control to appending to the users list.
-		String[] successParamTypes = { "java.lang.Integer", "java.lang.String" };
+		String[] successParamTypes = { Integer.class.getName(), byte[].class.getName(),
+				String.class.getName() };
 		Method showSuccess = Callback.getMethod("addUserToList", this, successParamTypes);
-		Object[] successParams = { null, userName };
+		Object[] successParams = { null, null, userName };
 		Callback successCallback = new Callback(showSuccess, this, successParams);
 
 		// Invoke the create RPC call.
 		String filename = REQUESTS_PREFIX + userName;
 		create(userDataLocations.get(userName), filename, successCallback, tryAgainCallback);
 	}
-
-	// Adds the given user name to the secret list of all user names.
-	public void addUserToList(Integer errorCode, String userName) throws SecurityException,
+	
+	public void readdUserToList(Integer errorCode, String userName) throws SecurityException,
 			ClassNotFoundException, NoSuchMethodException {
-		
 		// If we're getting back an error code indicating that the user list is too big, let the client know
 		if (errorCode != null && errorCode.equals(FILE_TOO_LARGE)) {
 			printError("Sorry, the system can't handle any more users. " +
@@ -482,10 +492,16 @@ public class FacebookNode extends TransactionNode {
 			doingWork = false;
 			return;
 		}
+		addUserToList(null, null, userName);
+	}
+
+	// Adds the given user name to the secret list of all user names.
+	public void addUserToList(Integer from, byte[] result, String userName) throws SecurityException,
+			ClassNotFoundException, NoSuchMethodException {
 		
 		// Create a failure callback that just tries this method once-more.
 		String[] failParamTypes = { "java.lang.Integer", "java.lang.String" };
-		Method tryAgain = Callback.getMethod("addUserToList", this, failParamTypes);
+		Method tryAgain = Callback.getMethod("readdUserToList", this, failParamTypes);
 		Object[] failParams = { null, userName };
 		Callback tryAgainCallback = new Callback(tryAgain, this, failParams);
 
@@ -636,9 +652,10 @@ public class FacebookNode extends TransactionNode {
 		Callback tryAgainCallback = new Callback(tryAgain, this, failParams);
 
 		// Create a success callback that forwards control to a success message.
-		String[] successParamTypes = { "java.lang.String" };
+		String[] successParamTypes = { Integer.class.getName(), byte[].class.getName(),
+				String.class.getName()};
 		Method showSuccess = Callback.getMethod("requestSuccess", this, successParamTypes);
-		Object[] successParams = { userName };
+		Object[] successParams = { null, null, userName };
 		Callback successCallback = new Callback(showSuccess, this, successParams);
 
 		// Now attempt to append to the requests file for the person with the userName.
@@ -648,7 +665,7 @@ public class FacebookNode extends TransactionNode {
 	}
 
 	// Show this message when we've succesfully completed a friend request.
-	public void requestSuccess(String userName) {
+	public void requestSuccess(Integer from, byte[] result, String userName) {
 		doingWork = false;
 		printOutput("Proposal for intimate, life-long friendship submitted to " + userName);
 	}
@@ -676,16 +693,17 @@ public class FacebookNode extends TransactionNode {
 		Callback tryAgainCallback = new Callback(tryAgain, this, failParams);
 
 		// Create a callback to call in the case of success.
-		String[] goodParamTypes = { "java.lang.String" };
+		String[] goodParamTypes = { Integer.class.getName(), byte[].class.getName()};
 		Method printAllPosts = Callback.getMethod("printAllPosts", this, goodParamTypes);
-		Object[] goodParams = { null };
+		Object[] goodParams = { null, null };
 		Callback printResultsCallback = new Callback(printAllPosts, this, goodParams);
 
 		String filename = MESSAGES_PREFIX + loggedInUser;
 		get(userDataLocations.get(loggedInUser), filename, printResultsCallback, tryAgainCallback);
 	}
 	
-	public void printAllPosts(String fileContents) {
+	public void printAllPosts(Integer from, byte[] result) {
+		String fileContents = Utility.byteArrayToString(result);
 		printOutput("\tYour wall sir (madam):");
 		Scanner in = new Scanner(fileContents);
 		while (in.hasNextLine()) {
@@ -809,7 +827,6 @@ public class FacebookNode extends TransactionNode {
 	public void abortWallPost(UUID txnId, String args) throws SecurityException, ClassNotFoundException, NoSuchMethodException, IllegalAccessException, InvocationTargetException {
 		if (addr == CLIENT_ID) {
 			printError("Failure to write to walls. Trying again now.");
-			
 			// Since we already have the friend list and such, we can actually skip ahead and
 			// use the info we already have without having to do a GET for the friend list.
 			Object[] info = parseArgs(args);
@@ -818,7 +835,7 @@ public class FacebookNode extends TransactionNode {
 			List<String> friends = (List<String>) info[0];
 			String friendString = StringUtils.join(friends, ' ');
 			String message = (String) info[1];
-			addMessageToAllWalls(friendString, message);
+			addMessageToAllWalls(null, Utility.stringToByteArray(friendString), message);
 		}
 	}
 	
@@ -828,7 +845,7 @@ public class FacebookNode extends TransactionNode {
 		Object[] nameArray = names.toArray();
 		String[] stringNameArray = Arrays.copyOf(nameArray, nameArray.length, String[].class);
 		String gluedNames = StringUtils.join(stringNameArray, ";");
-		return gluedNames + "||" + message;
+		return gluedNames + "||" + message.trim();
 	}
 	
 	/**
@@ -837,14 +854,12 @@ public class FacebookNode extends TransactionNode {
 	 * to post.
 	 */
 	public Object[] parseArgs(String args) {
-		Object[] result = new Object[2];
-		String[] parts = args.split("||");
+		printError("args: " + args);
+		String[] parts = args.split("\\|\\|");
 		String[] names = parts[0].split(";");
 		List<String> nameList = new ArrayList<String>(Arrays.asList(names));
-		
-		result[0] = nameList;
-		result[1] = parts[1];
-		return result;
+
+		return new Object[] {nameList, parts[1]};
 	}
 
 	// Fetches the friends list for this user. On success, passes control off to
@@ -857,16 +872,18 @@ public class FacebookNode extends TransactionNode {
 		Callback tryAgainCallback = new Callback(tryAgain, this, failParams);
 
 		// Create a callback to call in the case of success.
-		String[] goodParamTypes = { "java.lang.String", "java.lang.String" };
+		String[] goodParamTypes = { Integer.class.getName(), byte[].class.getName(),
+				String.class.getName() };
 		Method addToWalls = Callback.getMethod("addMessageToAllWalls", this, goodParamTypes);
-		Object[] goodParams = { null, message };
+		Object[] goodParams = { null, null, message };
 		Callback addToWallsCallback = new Callback(addToWalls, this, goodParams);
 
 		String filename = FRIENDS_PREFIX + loggedInUser;
 		get(userDataLocations.get(loggedInUser), filename, addToWallsCallback, tryAgainCallback);
 	}
 
-	public void addMessageToAllWalls(String friendList, String message) throws SecurityException {
+	public void addMessageToAllWalls(Integer from, byte[] result, String message) throws SecurityException {
+		String friendList = Utility.byteArrayToString(result);
 		// Get a non-duped set of all of my friends.
 		Set<String> friends = new HashSet<String>();
 		Scanner friendScanner = new Scanner(friendList);
@@ -957,43 +974,57 @@ public class FacebookNode extends TransactionNode {
 		Object[] failParams = { null, username };
 		Callback tryAgainCallback = new Callback(tryAgain, this, failParams);
 
+		String[] goodParamTypes = { Integer.class.getName(), byte[].class.getName(),
+				String.class.getName() };
+		Method continueMethod = Callback.getMethod("addToMyFriends", this, goodParamTypes);
+		Object[] goodParams = { null, null, username };
 		// Create a callback to pass control onto addToMyFriends.
-		Method continueMethod = Callback.getMethod("addToMyFriends", this, failParamTypes);
-		Callback continuationCallback = new Callback(continueMethod, this, failParams);
+		Callback continuationCallback = new Callback(continueMethod, this, goodParams);
 
 		String filename = FRIENDS_PREFIX + username;
 		String newContent = loggedInUser + " ";
 		append(userDataLocations.get(username), filename, newContent, continuationCallback, tryAgainCallback);
 	}
-
-	// Adds username to list of friends for current user.
-	public void addToMyFriends(Integer errorCode, String username) throws SecurityException, ClassNotFoundException, NoSuchMethodException {
+	
+	public void readdToMyFriends(Integer errorCode, String username) throws SecurityException, ClassNotFoundException, NoSuchMethodException {
 		// Check to see if appending would make file too large.
 		if (errorCode != null && errorCode.equals(FILE_TOO_LARGE)) {
 			printError("Sorry, but you have too many friends.");
 			doingWork = false;
 			return;
 		}
+		addToMyFriends(null, null, username);
+	}
+
+	// Adds username to list of friends for current user.
+	public void addToMyFriends(Integer from, byte[] result, String username) throws SecurityException, ClassNotFoundException, NoSuchMethodException {
 		
 		// Create a callback to try again in the case of failure.
 		String[] failParamTypes = { "java.lang.Integer", "java.lang.String" };
-		Method tryAgain = Callback.getMethod("addToMyFriends", this, failParamTypes);
+		Method tryAgain = Callback.getMethod("readdToMyFriends", this, failParamTypes);
 		Object[] failParams = { null, username };
 		Callback tryAgainCallback = new Callback(tryAgain, this, failParams);
 
 		// Create a callback to pass control onto removeFromRequestList.
-		Method continueMethod = Callback.getMethod("getRequestList", this, failParamTypes);
-		Callback continuationCallback = new Callback(continueMethod, this, failParams);
+		String[] goodParamTypes = { Integer.class.getName(), byte[].class.getName(),
+				String.class.getName() };
+		Object[] goodParams = {null, null, username};
+		Method continueMethod = Callback.getMethod("getRequestList", this, goodParamTypes);
+		Callback continuationCallback = new Callback(continueMethod, this, goodParams);
 
 		String filename = FRIENDS_PREFIX + loggedInUser;
 		String newContent = username + " ";
 		append(userDataLocations.get(loggedInUser), filename, newContent, continuationCallback, tryAgainCallback);
 	}
+	
+	public void regetRequestList(Integer errorCode, String username) throws SecurityException, ClassNotFoundException, NoSuchMethodException {
+		getRequestList(null, null, username);
+	}
 
-	public void getRequestList(Integer errorCode, String username) throws SecurityException, ClassNotFoundException, NoSuchMethodException {
+	public void getRequestList(Integer from, byte[] result, String username) throws SecurityException, ClassNotFoundException, NoSuchMethodException {
 		// Create a callback to try again in the case of failure.
 		String[] failParamTypes = { "java.lang.Integer", "java.lang.String" };
-		Method tryAgain = Callback.getMethod("getRequestList", this, failParamTypes);
+		Method tryAgain = Callback.getMethod("regetRequestList", this, failParamTypes);
 		Object[] failParams = { null, username };
 		Callback tryAgainCallback = new Callback(tryAgain, this, failParams);
 
@@ -1025,8 +1056,8 @@ public class FacebookNode extends TransactionNode {
 		}
 				
 		// Create a callback to try from the requests method in the case of failure.
-		String[] failParamTypes = { "java.lang.Integer", "java.lang.String" };
-		Method tryAgain = Callback.getMethod("getRequestList", this, failParamTypes);
+		String[] failParamTypes = { Integer.class.getName(), String.class.getName() };
+		Method tryAgain = Callback.getMethod("regetRequestList", this, failParamTypes);
 		Object[] failParams = { null, username };
 		Callback tryAgainCallback = new Callback(tryAgain, this, failParams);
 
@@ -1078,7 +1109,7 @@ public class FacebookNode extends TransactionNode {
 		Callback tryAgainCallback = new Callback(tryAgain, this, failParams);
 
 		// Create a callback to print the results once we've got 'em.
-		String[] goodParamTypes = { "java.lang.String" };
+		String[] goodParamTypes = { Integer.class.getName(), byte[].class.getName() };
 		Method printResults = Callback.getMethod("printList", this, goodParamTypes);
 		Object[] goodParams = { null };
 		Callback printCallback = new Callback(printResults, this, goodParams);
@@ -1087,7 +1118,8 @@ public class FacebookNode extends TransactionNode {
 	}
 
 	// Prints out the list with duplicates removed.
-	public void printList(String happyList) {
+	public void printList(Integer from, byte[] result) {
+		String happyList = Utility.byteArrayToString(result);
 		Set<String> pendingRequests = new HashSet<String>();
 		Scanner friendScanner = new Scanner(happyList);
 		while (friendScanner.hasNext()) {
@@ -1109,9 +1141,10 @@ public class FacebookNode extends TransactionNode {
 	
 	// If userName is present in fileContents, then calls the userExistsCallback. Otherwise calls
 	// the userNoExistsCallback.
-	public void checkFileForName(String fileContents, String userName,
+	public void checkFileForName(Integer from, byte[] result, String userName,
 			Callback userExistsCallback, Callback userNoExistsCallback)
 			throws IllegalAccessException, InvocationTargetException {
+		String fileContents = Utility.byteArrayToString(result);
 		Scanner userScanner = new Scanner(fileContents);
 		while (userScanner.hasNext()) {
 			String nextName = userScanner.next();

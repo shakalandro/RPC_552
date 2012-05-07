@@ -384,17 +384,17 @@ public class RPCNode extends RIONode {
 
                 // Log success message
                 logOutput("Successfully completed: " + requestType
-                        + " on server " + request.serverAddr
-                        + " and file " + request.filename);
+                        + " on server " + request.serverAddr);
                 
 
-                // If GET command result, print contents of file to console
-                if (requestType == Command.GET) {
-                    String file = Utility.byteArrayToString(pkt.getPayload());
-                    logOutput(file);
-                    if (callback != null) {
-                        Object[] params = callback.getParams();
-                        params[0] = file;
+                // Fill success handlers with node address and payload
+                String payload = Utility.byteArrayToString(pkt.getPayload());
+                logOutput(payload);
+                if (callback != null) {
+                    Object[] params = callback.getParams();
+                    params[0] = from;
+                    if (pkt != null) {
+                    	params[1] = pkt.getPayload();
                     }
                 }
 
