@@ -152,7 +152,7 @@ public class TransactionNode extends RPCNode {
 		UUID txnID = UUID.randomUUID();
 		TxnState txnState = new TxnState(txnID, participant_addrs, request, args);
 		coordinatorTxns.put(txnID, txnState);
-		for (int addr : coordinatorTxns.get(txnID).participants) {
+		for (int otherAddr : coordinatorTxns.get(txnID).participants) {
 			TxnPacket txnPkt = TxnPacket.getPropositionPacket(this, txnID, participant_addrs, 
 					request, args);
 			// Respond to the participant's accept or reject response
@@ -161,8 +161,8 @@ public class TransactionNode extends RPCNode {
 			// Abort the whole transaction
 			Callback failure = createCallback("sendTxnAbort", new String[] {UUID.class.getName()},
 					new Object[] {txnID});
-			this.makeRequest(Command.TXN, txnPkt.pack(), success, failure, addr, "");
-			writeOutput("(" + txnState.txnID + ") Issuing proposal request to " + addr);
+			this.makeRequest(Command.TXN, txnPkt.pack(), success, failure, otherAddr, "");
+			writeOutput("(" + txnState.txnID + ") Issuing proposal request to " + otherAddr);
 		}
 		txnLogger.logStart(txnState);
 		// Abort the transaction if we do not hear from all participants in a timely manner
@@ -215,11 +215,11 @@ public class TransactionNode extends RPCNode {
 	private void sendTxnCommit(UUID txnID) {
 		writeOutput("(" + txnID + ") txn committed");
 		TxnState txnState = coordinatorTxns.get(txnID);
-		for (Integer addr : txnState.participants) {
+		for (Integer otherAddr : txnState.participants) {
 			TxnPacket txnPkt = TxnPacket.getCommitPacket(this, txnID, txnState.request,
 					txnState.args);
-			makeRequest(Command.TXN, txnPkt.pack(), null, null, addr, "");
-			writeOutput("(" + txnID + ") sending commit message to " + addr);
+			makeRequest(Command.TXN, txnPkt.pack(), null, null, otherAddr, "");
+			writeOutput("(" + txnID + ") sending commit message to " + otherAddr);
 		}
 	}
 	
@@ -228,10 +228,10 @@ public class TransactionNode extends RPCNode {
 	 */
 	public void sendTxnAbort(UUID txnID) {
 		writeOutput("(" + txnID + ") txn aborted");
-		for (Integer addr : coordinatorTxns.get(txnID).getAcceptors()) {
+		for (Integer otherAddr : coordinatorTxns.get(txnID).getAcceptors()) {
 			TxnPacket txnPkt = TxnPacket.getAbortPacket(this, txnID);
-			makeRequest(Command.TXN, txnPkt.pack(), null, null, addr, "");
-			writeOutput("(" + txnID + ") sending abort message to " + addr);
+			makeRequest(Command.TXN, txnPkt.pack(), null, null, otherAddr, "");
+			writeOutput("(" + txnID + ") sending abort message to " + otherAddr);
 		}
 	}
 	

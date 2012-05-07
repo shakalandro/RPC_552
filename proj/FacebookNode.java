@@ -713,7 +713,7 @@ public class FacebookNode extends TransactionNode {
 	 * If there is a current transaction already in progress, then we will reject. Otherwise, accept.
 	 */
 	public boolean proposeWallPost(UUID txnId, String args) {
-		return numUnfinishedTxns() == 0;
+		return numUnfinishedTxns() == 1;
 	}
 	
 	// Temp file names take the form of WALL_POST_TEMP_PREFIX + name_of_user + || + txnId.
