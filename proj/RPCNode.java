@@ -13,7 +13,7 @@ import edu.washington.cs.cse490h.lib.PersistentStorageReader;
 import edu.washington.cs.cse490h.lib.PersistentStorageWriter;
 import edu.washington.cs.cse490h.lib.Utility;
 
-/*
+/**
  * This class provides RPC functionality, including implementation of client and
  * server stubs and handlers as well as the file commands that are provider to
  * users.
@@ -71,10 +71,15 @@ public class RPCNode extends RIONode {
     
     @Override
     public void start() {
-		// If server, need to initialize a new session id
+		// Initialize server variables
 		mySessionID = (int) System.currentTimeMillis();
 		storedResults = new HashMap<Integer, RPCResultPacket>();
 
+		// Initialize client variables
+		requestID = 0;
+		requestQueue = new LinkedList<RPCRequest>();
+		serverSessionIDs = new HashMap<Integer, Integer>();
+		
 		// Recover from a failed put
 		if (Utility.fileExists(this, TEMP_PUT_FILE)) {
 			try {
@@ -102,9 +107,6 @@ public class RPCNode extends RIONode {
 				fail();
 			}
 		}
-		requestID = 0;
-		requestQueue = new LinkedList<RPCRequest>();
-		serverSessionIDs = new HashMap<Integer, Integer>();
     }
 
     /**
@@ -165,76 +167,76 @@ public class RPCNode extends RIONode {
 
     // ------------ CLIENT STUBS ------------ //
 
-    /* Creates the file filename on server serverAddr */
-    public void create(int serverAddr, String filename) {
+    /** Creates the file filename on server serverAddr */
+    protected void create(int serverAddr, String filename) {
         create(serverAddr, filename, null, null);
     }
 
-    /*
+    /**
      * Creates the file filename on server serverAddr, attaches callbacks for
      * the eventual reply
      */
-    public void create(int serverAddr, String filename, Callback success,
+    protected void create(int serverAddr, String filename, Callback success,
             Callback failure) {
         makeRequest(Command.CREATE, filename, success, failure, serverAddr,
                 filename);
     }
 
-    /* Fetches the file filename on server serverAddr */
-    public void get(int serverAddr, String filename) {
+    /** Fetches the file filename on server serverAddr */
+    protected void get(int serverAddr, String filename) {
         get(serverAddr, filename, null, null);
     }
 
-    /*
+    /**
      * Fetches the file filename on server serverAddr, attaches callbacks for
      * the eventual reply
      */
-    public void get(int serverAddr, String filename, Callback success,
+    protected void get(int serverAddr, String filename, Callback success,
             Callback failure) {
         makeRequest(Command.GET, filename, success, failure, serverAddr,
                 filename);
     }
 
-    /* Puts contents into file filename on server serverAddr */
-    public void put(int serverAddr, String filename, String contents) {
+    /** Puts contents into file filename on server serverAddr */
+    protected void put(int serverAddr, String filename, String contents) {
         put(serverAddr, filename, contents, null, null);
     }
 
-    /*
+    /**
      * Puts contents into file filename on server serverAddr, attaches callbacks
      * for the eventual reply
      */
-    public void put(int serverAddr, String filename, String contents,
+    protected void put(int serverAddr, String filename, String contents,
             Callback success, Callback failure) {
         makeRequest(Command.PUT, filename + " " + contents, success, failure,
                 serverAddr, filename);
     }
 
-    /* Appends contents onto file filename on server serverAddr */
-    private void append(int serverAddr, String filename, String contents) {
+    /** Appends contents onto file filename on server serverAddr */
+    protected void append(int serverAddr, String filename, String contents) {
         append(serverAddr, filename, contents, null, null);
     }
 
-    /*
+    /**
      * Appends contents onto file filename on server serverAddr, attaches
      * callbacks for the eventual reply
      */
-    public void append(int serverAddr, String filename, String contents,
+    protected void append(int serverAddr, String filename, String contents,
             Callback success, Callback failure) {
         makeRequest(Command.APPEND, filename + " " + contents, success,
                 failure, serverAddr, filename);
     }
 
-    /* Deletes the file filename on server serverAddr */
-    private void delete(int serverAddr, String filename) {
+    /** Deletes the file filename on server serverAddr */
+    protected void delete(int serverAddr, String filename) {
         delete(serverAddr, filename, null, null);
     }
 
-    /*
+    /**
      * Deletes the file filename on server serverAddr, attaches callbacks for
      * the eventual reply
      */
-    public void delete(int serverAddr, String filename, Callback success,
+    protected void delete(int serverAddr, String filename, Callback success,
             Callback failure) {
         makeRequest(Command.DELETE, filename, success, failure, serverAddr,
                 filename);
@@ -270,11 +272,15 @@ public class RPCNode extends RIONode {
     		int serverAddr, String filename) {
     	
     	if (!serverSessionIDs.containsKey(serverAddr)) {
-    		serverSessionIDs.put(serverAddr, -1);
-            // May need to send RPC request to server requesting current
-            // session id
-    		if (command != Command.SESSION) {
-    			session(serverAddr);
+    		if (serverAddr == addr) {
+    			serverSessionIDs.put(serverAddr, mySessionID);
+    		} else {
+    			serverSessionIDs.put(serverAddr, -1);
+    			// May need to send RPC request to server requesting current
+    			// session id
+    			if (command != Command.SESSION) {
+    				session(serverAddr);
+    			}
     		}
     	}
     	
@@ -294,53 +300,47 @@ public class RPCNode extends RIONode {
     }
     
     /* Requests the server's current session id */
-    public void session(int serverAddr) {
-        makeRequest(Command.SESSION, "session request", null, null, serverAddr,
-                "");
+    private void session(int serverAddr) {
+        makeRequest(Command.SESSION, "session request", null, null, serverAddr, "");
     }
 
-    /**
-     * Sends the next request in the requestQueue, if it exists
-     */
-    public void sendNextRequest() {
+    /* Sends the next request in the requestQueue, if it exists */
+    private void sendNextRequest() {
         if (!requestQueue.isEmpty()) {
             attemptToSend(requestQueue.peek());
         }
     }
 
-    /**
-     * Sends the given RPC request if it is at the head of the requestQueue
-     */
+    /** Sends the given RPC request if it is at the head of the requestQueue */
     public void attemptToSend(RPCRequest request) {
         if (requestQueue.peek() == request) {
         	send(request);
         }
     }
     
-    /**
-     * Sends the given RPC request
-     * @param request
-     */
+    /** Sends the given RPC request */
     private void send(RPCRequest request) {
         RPCRequestPacket pkt = request.pckt;
         
         pkt.setServerSessionID(serverSessionIDs.get(request.serverAddr));
+        
+        if (request.serverAddr == addr) {
+        	handleRPCrequest(addr, pkt); 
+        } else {
+        	RIOSend(request.serverAddr, Protocol.RPC_REQUEST_PKT, pkt.pack());
 
-        RIOSend(request.serverAddr, Protocol.RPC_REQUEST_PKT,
-                pkt.pack());
-
-        // Set timeout to retry this method in TIMEOUT steps, will trigger
-        // infinite timeouts
-        Method method = null;
-        try {
-            method = Callback.getMethod("attemptToSend", this,
-                    new String[] { "RPCRequest" });
-        } catch (Exception e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
+        	// Set timeout to retry this method in TIMEOUT steps, will trigger
+        	// infinite timeouts
+        	Method method = null;
+        	try {
+        		method = Callback.getMethod("attemptToSend", this, new String[] { "RPCRequest" });
+        	} catch (Exception e) {
+        		// TODO Auto-generated catch block
+        		e.printStackTrace();
+        	}
+        	Object[] params = { request };
+        	addTimeout(new Callback(method, this, params), TIMEOUT_INTERVAL);
         }
-        Object[] params = { request };
-        addTimeout(new Callback(method, this, params), TIMEOUT_INTERVAL);
     }
 
     /**
@@ -386,6 +386,7 @@ public class RPCNode extends RIONode {
                 logOutput("Successfully completed: " + requestType
                         + " on server " + request.serverAddr);
                 
+<<<<<<< HEAD
 
                 // Fill success handlers with node address and payload
                 String payload = Utility.byteArrayToString(pkt.getPayload());
@@ -395,6 +396,15 @@ public class RPCNode extends RIONode {
                     params[0] = from;
                     if (pkt != null) {
                     	params[1] = pkt.getPayload();
+=======
+                // If GET command result, print contents of file to console
+                if (requestType == Command.GET) {
+                    String file = Utility.byteArrayToString(pkt.getPayload());
+                    logOutput(file);
+                    if (callback != null) {
+                        Object[] params = callback.getParams();
+                        params[0] = file;
+>>>>>>> 72265a901665edf198e8c231a2a8086d6b4b3ace
                     }
                 }
 
@@ -477,10 +487,8 @@ public class RPCNode extends RIONode {
             // Identical to last request
         	result = lastResult;
         } else if (lastResult != null && pkt.getRequestID() < lastResult.getRequestID()) {
-            // "Old" request
-            // TODO: I don't think this can happen given the semantics that the
-            // client waits for at most one result at a time, but if this were
-            // to happen, we'd want to ignore this "old" request
+            // "Old" request -- ignore it
+        	logError("Received stale RPC Request ID, ignored");
             return;
         } else {
             // "New" request -- compute it!
@@ -489,8 +497,12 @@ public class RPCNode extends RIONode {
 
         storedResults.put(from, result);
 
-        // Send response
-        RIOSend(from, Protocol.RPC_RESULT_PKT, result.pack());
+        if (from == addr) {
+        	handleRPCresult(addr, result);
+        } else {
+        	// Send response
+        	RIOSend(from, Protocol.RPC_RESULT_PKT, result.pack());
+        }
     }
     
     /**
