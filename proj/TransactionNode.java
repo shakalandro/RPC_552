@@ -1,6 +1,10 @@
 import java.io.IOException;
 import java.lang.reflect.Method;
-import java.util.*;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
 
 import edu.washington.cs.cse490h.lib.Callback;
 import edu.washington.cs.cse490h.lib.PersistentStorageReader;
@@ -152,17 +156,17 @@ public class TransactionNode extends RPCNode {
 		UUID txnID = UUID.randomUUID();
 		TxnState txnState = new TxnState(txnID, participant_addrs, request, args);
 		coordinatorTxns.put(txnID, txnState);
-		for (int addr : coordinatorTxns.get(txnID).participants) {
+		for (int otherAddr : coordinatorTxns.get(txnID).participants) {
 			TxnPacket txnPkt = TxnPacket.getPropositionPacket(this, txnID, participant_addrs, 
 					request, args);
 			// Respond to the participant's accept or reject response
 			Callback success = createCallback("receiveProposalResponse",
-					new String[] {Integer.class.getName(), Byte[].class.getName()}, null);
+					new String[] {Integer.class.getName(), byte[].class.getName()}, null);
 			// Abort the whole transaction
 			Callback failure = createCallback("sendTxnAbort", new String[] {UUID.class.getName()},
 					new Object[] {txnID});
-			this.makeRequest(Command.TXN, txnPkt.pack(), success, failure, addr, "");
-			writeOutput("(" + txnState.txnID + ") Issuing proposal request to " + addr);
+			this.makeRequest(Command.TXN, txnPkt.pack(), success, failure, otherAddr, "");
+			writeOutput("(" + txnState.txnID + ") Issuing proposal request to " + otherAddr);
 		}
 		txnLogger.logStart(txnState);
 		// Abort the transaction if we do not hear from all participants in a timely manner
@@ -175,7 +179,7 @@ public class TransactionNode extends RPCNode {
 	 * Success callback for proposeTransaction. If all the participants have responded then a
 	 * decision is made and multicast out to the participants.
 	 */
-	public void receiveProposalResponse(Integer from, Byte[] response) {
+	public void receiveProposalResponse(Integer from, byte[] response) {
 		TxnPacket pkt = TxnPacket.unpack(response);
 		TxnState txnState = coordinatorTxns.get(pkt.getID());
 		if (pkt.getProtocol() == TxnProtocol.TXN_ACCEPT) {
@@ -213,13 +217,13 @@ public class TransactionNode extends RPCNode {
 	 * Notifies all participants of a commit decision.
 	 */
 	private void sendTxnCommit(UUID txnID) {
-		writeOutput("(" + txnID + ") txn committed");
+		writeOutput("(" + txnID + ") txn commit decided");
 		TxnState txnState = coordinatorTxns.get(txnID);
-		for (Integer addr : txnState.participants) {
+		for (Integer otherAddr : txnState.participants) {
 			TxnPacket txnPkt = TxnPacket.getCommitPacket(this, txnID, txnState.request,
 					txnState.args);
-			makeRequest(Command.TXN, txnPkt.pack(), null, null, addr, "");
-			writeOutput("(" + txnID + ") sending commit message to " + addr);
+			makeRequest(Command.TXN, txnPkt.pack(), null, null, otherAddr, "");
+			writeOutput("(" + txnID + ") sending commit message to " + otherAddr);
 		}
 	}
 	
@@ -227,11 +231,11 @@ public class TransactionNode extends RPCNode {
 	 * Notifies all participants that accepted the proposal of an abort decision.
 	 */
 	public void sendTxnAbort(UUID txnID) {
-		writeOutput("(" + txnID + ") txn aborted");
-		for (Integer addr : coordinatorTxns.get(txnID).getAcceptors()) {
+		writeOutput("(" + txnID + ") txn abort decided");
+		for (Integer otherAddr : coordinatorTxns.get(txnID).getAcceptors()) {
 			TxnPacket txnPkt = TxnPacket.getAbortPacket(this, txnID);
-			makeRequest(Command.TXN, txnPkt.pack(), null, null, addr, "");
-			writeOutput("(" + txnID + ") sending abort message to " + addr);
+			makeRequest(Command.TXN, txnPkt.pack(), null, null, otherAddr, "");
+			writeOutput("(" + txnID + ") sending abort message to " + otherAddr);
 		}
 	}
 	
@@ -284,11 +288,13 @@ public class TransactionNode extends RPCNode {
 				Callback decisionTimeout = createCallback("sendDecisionRequest",
 						new String[] {UUID.class.getName()}, new Object[] {pkt.getID()});
 				addTimeout(decisionTimeout, DECISION_TIMEOUT);
+				writeOutput("(" + txnState.txnID + ") Accepting proposal");
 				return TxnPacket.getAcceptPacket(this, pkt.getID());
 			} else {
 				txnLogger.logReject(txnState);
 				txnState.status = TxnState.TxnStatus.ABORTED;
 				recieveTxnAbort(pkt);
+				writeOutput("(" + txnState.txnID + ") Rejecting proposal");
 				return TxnPacket.getRejectPacket(this, pkt.getID(), "rejected");
 			}
 		} catch (NoSuchMethodException e) {
@@ -331,6 +337,7 @@ public class TransactionNode extends RPCNode {
 					java.lang.String.class);
 			handler.invoke(this, txnState.txnID, pkt.getPayload());
 			txnLogger.logDone(txnState);
+			writeOutput("(" + txnState.txnID + ") committed successfully");
 		} catch (NoSuchMethodException e) {
 			writeError("There is no handler for transaction commit: " + request);
 			fail();
@@ -367,6 +374,7 @@ public class TransactionNode extends RPCNode {
 					java.lang.String.class);
 			handler.invoke(this, txnState.txnID, pkt.getPayload());
 			txnLogger.logDone(txnState);
+			writeOutput("(" + txnState.txnID + " aborted successfully");
 		} catch (NoSuchMethodException e) {
 			writeError("There is no handler for transaction abort: " + request);
 			fail();
@@ -388,12 +396,12 @@ public class TransactionNode extends RPCNode {
 	public void sendDecisionRequest(UUID txnID) {
 		writeOutput("(" + txnID + ") starting termination protocol");
 		TxnState txnState = participantTxns.get(txnID);
-		for (Integer addr : txnState.participants) {
+		for (Integer otherAddr : txnState.participants) {
 			TxnPacket txnPkt = TxnPacket.getDecisionRequestPacket(this, txnID);
 			Callback success = createCallback("receiveDecisionResponse",
 					new String[] {Byte[].class.getName()}, null);
-			makeRequest(Command.TXN, txnPkt.pack(), success, null, addr, "");
-			writeOutput("(" + txnID + ") asking " + addr + " for decision");
+			makeRequest(Command.TXN, txnPkt.pack(), success, null, otherAddr, "");
+			writeOutput("(" + txnID + ") asking " + otherAddr + " for decision");
 		}
 		Callback decisionTimeout = createCallback("resendDecisionRequest",
 				new String[] {UUID.class.getName()}, new Object[] {txnID});
@@ -412,7 +420,7 @@ public class TransactionNode extends RPCNode {
 	 * Parses a decision request response, which could be an abort notification, commit notification
 	 * or an empty response symbolizing that the participant is waiting.
 	 */
-	public void receiveDecisionResponse(Byte[] response) {
+	public void receiveDecisionResponse(byte[] response) {
 		if (response != null && response.length > 0) {
 			TxnPacket pkt = TxnPacket.unpack(response);
 			writeOutput("(" + pkt.getID() + ") recieved decision response");
@@ -473,10 +481,9 @@ public class TransactionNode extends RPCNode {
     			writeError("Unknown transaction control message: " + protocol);
     		}
     		
-        	return RPCResultPacket.getPacket(this, this.addr, Status.SUCCESS, result);
-        } else {
-        	return super.handleRPCCommand(request, senderAddr, pkt);
+        	return RPCResultPacket.getPacket(this, pkt.getRequestID(), Status.SUCCESS, result);
         }
+        return super.handleRPCCommand(request, senderAddr, pkt);
 	}
 	
 	////////////////////////////////// Helper Code //////////////////////////////////////////////
