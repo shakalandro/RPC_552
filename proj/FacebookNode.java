@@ -294,14 +294,14 @@ public class FacebookNode extends TransactionNode {
 		doingWork = true;
 		
 		// Create a callback to be called if the user doesn't exist.
-		String[] paramTypes = { "java.lang.Integer", "java.lang.String" };
+		String[] paramTypes = { "java.lang.Integer", byte[].class.getName(), "java.lang.String" };
 		Method createFiles = Callback.getMethod("createPostsFile", this, paramTypes);
-		Object[] params = { null, userName };
+		Object[] params = { null, null, userName };
 		Callback userNoExistCallback = new Callback(createFiles, this, params);
 
 		// Create a callback to call if the user already exists.
-		String[] noParamTypes = {};
-		Object[] noParams = {};
+		String[] noParamTypes = {Integer.class.getName(), byte[].class.getName()};
+		Object[] noParams = {null, null};
 		Method showWarning = Callback.getMethod("userAlreadyExists", this, noParamTypes);
 		Callback userExistsCallback = new Callback(showWarning, this, noParams);
 
@@ -351,7 +351,7 @@ public class FacebookNode extends TransactionNode {
 				{ Integer.class.getName(), byte[].class.getName(), String.class.getName(),
 				Callback.class.getName(), Callback.class.getName() };
 		Method checkForName = Callback.getMethod("checkFileForName", this, pTypes);
-		Object[] p = { null, userName, userExistsCallback, userNoExistsCallback };
+		Object[] p = { null, null, userName, userExistsCallback, userNoExistsCallback };
 		Callback checkForNameCallback = new Callback(checkForName, this, p);
 		get(ALL_USERS_LOCATION, ALL_USERS_FILE, checkForNameCallback, tryAgainCallback);
 	}
@@ -381,14 +381,14 @@ public class FacebookNode extends TransactionNode {
 
 	// Called if an attempt was made to create a user that already exists. We just spit out a
 	// warning to the console.
-	public void userAlreadyExists() {
+	public void userAlreadyExists(Integer from, byte[] res) {
 		doingWork = false;
 		printError("Sorry, a user by that name already exists. Might we suggest "
 				+ "you be more creative?");
 	}
 
 	// Creates the posts file for a user.
-	public void createPostsFile(Integer errorCode, String userName) throws SecurityException,
+	public void createPostsFile(Integer errorCode, byte[] res, String userName) throws SecurityException,
 			ClassNotFoundException, NoSuchMethodException {
 
 		// We need to figure out which server we're going to store this user's meta-data on.
@@ -406,9 +406,9 @@ public class FacebookNode extends TransactionNode {
 		}
 		
 		// Create a failure callback that just tries this method once-more.
-		String[] failParamTypes = { "java.lang.Integer", "java.lang.String" };
+		String[] failParamTypes = { "java.lang.Integer", byte[].class.getName(), "java.lang.String" };
 		Method tryAgain = Callback.getMethod("createPostsFile", this, failParamTypes);
-		Object[] failParams = { null, userName };
+		Object[] failParams = { null, null, userName };
 		Callback tryAgainCallback = new Callback(tryAgain, this, failParams);
 
 		// Create a success callback that forwards control to creating the friends file.
@@ -507,9 +507,9 @@ public class FacebookNode extends TransactionNode {
 		Callback tryAgainCallback = new Callback(tryAgain, this, failParams);
 
 		// Create a success callback that forwards control to a success message.
-		String[] successParamTypes = { "java.lang.String" };
+		String[] successParamTypes = {Integer.class.getName(), byte[].class.getName(), "java.lang.String" };
 		Method showSuccess = Callback.getMethod("createSuccess", this, successParamTypes);
-		Object[] successParams = { userName };
+		Object[] successParams = {null, null, userName };
 		Callback successCallback = new Callback(showSuccess, this, successParams);
 
 		// Now attempt to append to the users file.
@@ -518,7 +518,7 @@ public class FacebookNode extends TransactionNode {
 	}
 
 	// Prints a message confirming success in creating a new user.
-	public void createSuccess(String userName) {
+	public void createSuccess(Integer from, byte[] res, String userName) {
 		doingWork = false;
 		printOutput("Welcome to myface+, " + userName);
 	}
@@ -536,9 +536,9 @@ public class FacebookNode extends TransactionNode {
 		}
 
 		// Create a callback to use if the user doesn't exist.
-		String[] noExistParamTypes = { "java.lang.String" };
+		String[] noExistParamTypes = {"java.lang.Integer", byte[].class.getName(), "java.lang.String" };
 		Method noExist = Callback.getMethod("noSuchUserReport", this, noExistParamTypes);
-		Object[] noExistParams = { userName };
+		Object[] noExistParams = { null, null, userName };
 		Callback noExistCallback = new Callback(noExist, this, noExistParams);
 
 		// Create a callback to use if the user does already exist.
@@ -550,13 +550,13 @@ public class FacebookNode extends TransactionNode {
 	}
 
 	// Sets the logged in user to the given string.
-	public void setLoggedInUser(String username) {
+	public void setLoggedInUser(Integer from, byte[] results, String username) {
 		loggedInUser = username;
 		printOutput("Have a nice myface+ session, " + username);
 		doingWork = false;
 	}
 
-	public void noSuchUserReport(String username) {
+	public void noSuchUserReport(Integer from, byte[] results, String username) {
 		doingWork = false;
 		printError("Bad move, bro. No such user by the name of " + username);
 	}
