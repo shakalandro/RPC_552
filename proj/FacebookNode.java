@@ -328,7 +328,6 @@ public class FacebookNode extends TransactionNode {
 
 		// If we failed because the .users file doesn't exist, then we must create it.
 		if (errorCode != null && errorCode.equals(FILE_NO_EXIST)) {
-			printOutput(".user file doesn't exist. Creating now.");
 			createUsersFile(null, userNoExistsCallback);
 			return;
 		}
@@ -642,7 +641,7 @@ public class FacebookNode extends TransactionNode {
 		}
 		
 		// If file doesn't exist, then just say that the person doesn't exist and move on.
-		if (errorCode != null && errorCode.equals(FILE_NO_EXIST)) {
+		if (!userDataLocations.containsKey(userName) || (errorCode != null && errorCode.equals(FILE_NO_EXIST))) {
 			printError("Sorry, there is no such user named " + userName);
 			doingWork = false;
 			return;
@@ -1037,16 +1036,17 @@ public class FacebookNode extends TransactionNode {
 		Callback tryAgainCallback = new Callback(tryAgain, this, failParams);
 
 		// Create a callback to pass control onto removeFromRequestList.
-		String[] goodParamTypes = {"java.lang.String", "java.lang.String" };
+		String[] goodParamTypes = {Integer.class.getName(), byte[].class.getName(), "java.lang.String" };
 		Method continueMethod = Callback.getMethod("removeFromRequestList", this, goodParamTypes);
-		Object[] goodParams = {null, username};
+		Object[] goodParams = {null, null, username};
 		Callback continuationCallback = new Callback(continueMethod, this, goodParams);
 
 		String filename = REQUESTS_PREFIX + loggedInUser;
 		get(userDataLocations.get(loggedInUser), filename, continuationCallback, tryAgainCallback);
 	}
 
-	public void removeFromRequestList(String fileContents, String username) throws SecurityException, ClassNotFoundException, NoSuchMethodException {
+	public void removeFromRequestList(Integer from, byte[] contents, String username) throws SecurityException, ClassNotFoundException, NoSuchMethodException {
+		String fileContents = Utility.byteArrayToString(contents);
 		Set<String> pendingRequests = new HashSet<String>();
 		Scanner friendScanner = new Scanner(fileContents);
 		while (friendScanner.hasNext()) {
@@ -1070,9 +1070,9 @@ public class FacebookNode extends TransactionNode {
 		Callback tryAgainCallback = new Callback(tryAgain, this, failParams);
 
 		// Create a callback to pass control onto acceptedFriendSuccess.
-		String[] goodParamTypes = {"java.lang.String"};
+		String[] goodParamTypes = {Integer.class.getName(), byte[].class.getName(), "java.lang.String"};
 		Method continueMethod = Callback.getMethod("acceptedFriendSuccess", this, goodParamTypes);
-		Object[] goodParams = { username };
+		Object[] goodParams = {null, null, username };
 		Callback continuationCallback = new Callback(continueMethod, this, goodParams);
 
 		// Now attempt to write over the old requests file with the cleaned up one.
@@ -1082,7 +1082,7 @@ public class FacebookNode extends TransactionNode {
 		put(userDataLocations.get(loggedInUser), filename, newFileContents, continuationCallback, tryAgainCallback);
 	}
 	
-	public void acceptedFriendSuccess(String username) {
+	public void acceptedFriendSuccess(Integer from, byte[] results, String username) {
 		doingWork = false;
 		printOutput("Happy Day! We've made " + username + " our special friend!");
 	}
@@ -1116,10 +1116,16 @@ public class FacebookNode extends TransactionNode {
 		Object[] failParams = { null, filename, serverId };
 		Callback tryAgainCallback = new Callback(tryAgain, this, failParams);
 
+		// If the file doesn't exist, simply stop trying to do stuff.
+		if (errorCode != null && errorCode == FILE_NO_EXIST) {
+			printError("None");
+			return;
+		}
+		
 		// Create a callback to print the results once we've got 'em.
 		String[] goodParamTypes = { Integer.class.getName(), byte[].class.getName() };
 		Method printResults = Callback.getMethod("printList", this, goodParamTypes);
-		Object[] goodParams = { null };
+		Object[] goodParams = { null, null };
 		Callback printCallback = new Callback(printResults, this, goodParams);
 
 		get(serverId, filename, printCallback, tryAgainCallback);
@@ -1192,10 +1198,10 @@ public class FacebookNode extends TransactionNode {
 
 		// Create a success callback that checks the retrieved file for userName;
 		String[] pTypes =
-				{ "java.lang.String", "java.lang.String", "edu.washington.cs.cse490h.lib.Callback",
+				{ "java.lang.Integer", byte[].class.getName(), String.class.getName(), "edu.washington.cs.cse490h.lib.Callback",
 						"edu.washington.cs.cse490h.lib.Callback" };
 		Method checkForName = Callback.getMethod("checkFileForName", this, pTypes);
-		Object[] p = { null, userName, userExistsCallback, userNoExistsCallback };
+		Object[] p = { null, null, userName, userExistsCallback, userNoExistsCallback };
 		Callback checkForNameCallback = new Callback(checkForName, this, p);
 
 		// We need to fetch the contents of the friends file for this user.

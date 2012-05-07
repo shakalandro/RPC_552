@@ -399,7 +399,7 @@ public class TransactionNode extends RPCNode {
 		for (Integer otherAddr : txnState.participants) {
 			TxnPacket txnPkt = TxnPacket.getDecisionRequestPacket(this, txnID);
 			Callback success = createCallback("receiveDecisionResponse",
-					new String[] {Byte[].class.getName()}, null);
+					new String[] {byte[].class.getName()}, null);
 			makeRequest(Command.TXN, txnPkt.pack(), success, null, otherAddr, "");
 			writeOutput("(" + txnID + ") asking " + otherAddr + " for decision");
 		}
