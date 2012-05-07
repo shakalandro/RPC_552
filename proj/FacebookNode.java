@@ -54,6 +54,8 @@ public class FacebookNode extends TransactionNode {
 	
 	// Temp file prefix for a wall-post transaction.
 	private static final String WALL_POST_TEMP_PREFIX = ".wall_temp_";
+	
+	private static final int RETRY_TRANSACTION_TIMEOUT = PROPOSAL_RESPONSE_TIMEOUT + 2;
 
 	// Error codes for file RPC methods.
 	private static final Integer CRASH = 1;
@@ -836,7 +838,12 @@ public class FacebookNode extends TransactionNode {
 			List<String> friends = (List<String>) info[0];
 			String friendString = StringUtils.join(friends, ' ');
 			String message = (String) info[1];
-			addMessageToAllWalls(null, Utility.stringToByteArray(friendString), message);
+			
+			Callback retryTimeout = createCallback("addMessageToAllWalls",
+					new String[] {Integer.class.getName(), byte[].class.getName(), 
+					String.class.getName()}, new Object[] {null,
+							Utility.stringToByteArray(friendString), message});
+			addTimeout(retryTimeout, RETRY_TRANSACTION_TIMEOUT);
 		}
 	}
 	
