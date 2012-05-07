@@ -29,6 +29,7 @@ import edu.washington.cs.cse490h.lib.Utility;
 
 public class FacebookNode extends TransactionNode {
 	
+	private static final String COLOR_CYAN = "0;36";
 	private static final String COLOR_PURPLE = "1;35";
 	private static final String COLOR_RED = "0;31";
 	
@@ -764,7 +765,7 @@ public class FacebookNode extends TransactionNode {
 					postsFileWriter.write(buf);
 				} else {
 					// The temp file is either created but not written or not created at all. In either case, 
-					// it does not contain a version with the appended message. So we need to append the message ont
+					// it does not contain a version with the appended message. So we need to append the message on
 					// the wall posts file and then write that to a temp file before then writing it to the actual 
 					// file.
 					assert(Utility.fileExists(this, MESSAGES_PREFIX + name));
