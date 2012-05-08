@@ -168,6 +168,7 @@ public class TransactionNode extends RPCNode {
 			this.makeRequest(Command.TXN, txnPkt.pack(), success, failure, otherAddr, "");
 			writeOutput("(" + txnState.txnID + ") Issuing proposal request to " + otherAddr);
 		}
+		txnState.status = TxnState.TxnStatus.WAITING;
 		txnLogger.logStart(txnState);
 		// Abort the transaction if we do not hear from all participants in a timely manner
 		Callback abortTimeout = createCallback("proposalTimeoutAbort",
@@ -182,21 +183,23 @@ public class TransactionNode extends RPCNode {
 	public void receiveProposalResponse(Integer from, byte[] response) {
 		TxnPacket pkt = TxnPacket.unpack(response);
 		TxnState txnState = coordinatorTxns.get(pkt.getID());
-		if (pkt.getProtocol() == TxnProtocol.TXN_ACCEPT) {
-			writeOutput("(" + txnState.txnID + ") Received proposal acceptance from node " + from);
-			txnState.accept(from);
-		} else {
-			writeOutput("(" + txnState.txnID + ") Received proposal rejection from node " + from + ": " + pkt.getPayload());
-			txnState.reject(from);
-		}
-		if (txnState.allVotesIn()) {
-			writeOutput("(" + txnState.txnID + ") All proposal responses recieved");
-			if (txnState.allAccepted()) {
-				txnLogger.logCommit(txnState);
-				sendTxnCommit(txnState.txnID);
+		if (txnState.status == TxnState.TxnStatus.WAITING) {
+			if (pkt.getProtocol() == TxnProtocol.TXN_ACCEPT) {
+				writeOutput("(" + txnState.txnID + ") Received proposal acceptance from node " + from);
+				txnState.accept(from);
 			} else {
-				txnLogger.logAbort(txnState);
-				sendTxnAbort(txnState.txnID);
+				writeOutput("(" + txnState.txnID + ") Received proposal rejection from node " + from + ": " + pkt.getPayload());
+				txnState.reject(from);
+			}
+			if (txnState.allVotesIn()) {
+				writeOutput("(" + txnState.txnID + ") All proposal responses recieved");
+				if (txnState.allAccepted()) {
+					txnLogger.logCommit(txnState);
+					sendTxnCommit(txnState.txnID);
+				} else {
+					txnLogger.logAbort(txnState);
+					sendTxnAbort(txnState.txnID);
+				}
 			}
 		}
 	}
