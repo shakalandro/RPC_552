@@ -22,7 +22,7 @@ public class ReliableInOrderMsgLayer {
     private HashMap<Integer, OutChannel> outConnections;
     private RIONode n;
 
-    public static boolean debugging = false;
+    public static boolean debugging = true;
 
     /**
      * Constructor.
@@ -215,6 +215,7 @@ abstract class Channel {
             if (reader.ready()) {
                 int num = Integer.parseInt(reader.readLine().trim());
                 reader.close();
+                debugPrint("Read sequence number " + num + " from log " + filename);
                 return num;
             }
             reader.close();
