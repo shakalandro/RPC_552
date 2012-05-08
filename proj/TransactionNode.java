@@ -156,6 +156,7 @@ public class TransactionNode extends RPCNode {
 		UUID txnID = UUID.randomUUID();
 		TxnState txnState = new TxnState(txnID, participant_addrs, request, args);
 		coordinatorTxns.put(txnID, txnState);
+		txnState.status = TxnState.TxnStatus.WAITING;
 		for (int otherAddr : coordinatorTxns.get(txnID).participants) {
 			TxnPacket txnPkt = TxnPacket.getPropositionPacket(this, txnID, participant_addrs, 
 					request, args);
@@ -165,10 +166,9 @@ public class TransactionNode extends RPCNode {
 			// Abort the whole transaction
 			Callback failure = createCallback("sendTxnAbort", new String[] {UUID.class.getName()},
 					new Object[] {txnID});
-			this.makeRequest(Command.TXN, txnPkt.pack(), success, failure, otherAddr, "");
 			writeOutput("(" + txnState.txnID + ") Issuing proposal request to " + otherAddr);
+			this.makeRequest(Command.TXN, txnPkt.pack(), success, failure, otherAddr, "");
 		}
-		txnState.status = TxnState.TxnStatus.WAITING;
 		txnLogger.logStart(txnState);
 		// Abort the transaction if we do not hear from all participants in a timely manner
 		Callback abortTimeout = createCallback("proposalTimeoutAbort",
@@ -347,6 +347,7 @@ public class TransactionNode extends RPCNode {
 			Method handler = me.getDeclaredMethod(COMMIT_PREFIX + request, java.util.UUID.class,
 					java.lang.String.class);
 			handler.invoke(this, txnState.txnID, pkt.getPayload());
+			txnState.status = TxnState.TxnStatus.DONE;
 			txnLogger.logDone(txnState);
 			writeOutput("(" + txnState.txnID + ") committed successfully");
 		} catch (NoSuchMethodException e) {
@@ -383,7 +384,8 @@ public class TransactionNode extends RPCNode {
 			Class<? extends TransactionNode> me = this.getClass();
 			Method handler = me.getDeclaredMethod(ABORT_PREFIX + request, java.util.UUID.class,
 					java.lang.String.class);
-			handler.invoke(this, txnState.txnID, pkt.getPayload());
+			handler.invoke(this, txnState.txnID, txnState.args);
+			txnState.status = TxnState.TxnStatus.DONE;
 			txnLogger.logDone(txnState);
 			writeOutput("(" + txnState.txnID + " aborted successfully");
 		} catch (NoSuchMethodException e) {
