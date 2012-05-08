@@ -54,9 +54,11 @@ public class TransactionNode extends RPCNode {
 		this.txnLogger = new TxnLog(this.logFile, this);
 		try {
 			if (Utility.fileExists(this, this.logFile)) {
+				writeOutput("Starting txn recovery");
 				PersistentStorageReader reader =  getReader(this.logFile);
 				while (reader.ready()) {
 					String line = reader.readLine();
+					writeOutput("Txn recovery log message: " + line);
 					String[] parts = line.split(" ", 2);
 					TxnLog.Record r = TxnLog.parseRecordType(parts[0]);
 					String txnRecordData = parts[1];
@@ -109,6 +111,7 @@ public class TransactionNode extends RPCNode {
 				for (TxnState txnState : coordinatorTxns.values()) {
 					if (txnState.status == TxnState.TxnStatus.UNKNOWN) {
 						txnLogger.logAbort(txnState);
+						writeOutput("(" + txnState.txnID + ") recovery aborting");
 						sendTxnAbort(null, txnState.txnID);
 					}
 				}
@@ -121,10 +124,13 @@ public class TransactionNode extends RPCNode {
 				// 		termination protocol.
 				for (TxnState txnState : participantTxns.values()) {
 					if (txnState.status == TxnState.TxnStatus.WAITING) {
+						writeOutput("(" + txnState.txnID + ") recovery decision request needed");
 						sendDecisionRequest(txnState.txnID);
 					} else if (txnState.status == TxnState.TxnStatus.ABORTED) {
+						writeOutput("(" + txnState.txnID + ") recovery abort handler called");
 						recieveTxnAbort(TxnPacket.getAbortPacket(this, txnState.txnID, txnState.request));
 					} else if (txnState.status == TxnState.TxnStatus.COMMITTED) {
+						writeOutput("(" + txnState.txnID + ") recovery commit handler called");
 						recieveTxnCommit(TxnPacket.getCommitPacket(this, txnState.txnID,
 								txnState.request, txnState.args));
 					}
@@ -613,6 +619,8 @@ public class TransactionNode extends RPCNode {
 				return Record.COMMIT;
 			} else if (s.equals(Record.ABORT.msg)) {
 				return Record.ABORT;
+			} else if (s.equals(Record.DONE.msg)) {
+				return Record.DONE;
 			} else {
 				return null;
 			}
