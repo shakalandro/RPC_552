@@ -201,6 +201,8 @@ public class TransactionNode extends RPCNode {
 					sendTxnAbort(txnState.txnID);
 				}
 			}
+		} else {
+			writeOutput("(" + txnState.txnID + ") ignoring proposal response from " + from);
 		}
 	}
 	
