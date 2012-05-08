@@ -245,7 +245,7 @@ public class FacebookNode extends TransactionNode {
 			// Find the message content.
 			int messageStart = command.indexOf(' ');
 			String messageContent = command.substring(messageStart+1);
-			messageContent = loggedInUser + " says... " + messageContent + "\n\n";
+			messageContent = loggedInUser + " says... " + messageContent + '\n';
 
 			try {
 				postMessage(messageContent);

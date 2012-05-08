@@ -405,7 +405,7 @@ public class TransactionNode extends RPCNode {
 		for (Integer otherAddr : txnState.participants) {
 			TxnPacket txnPkt = TxnPacket.getDecisionRequestPacket(this, txnID);
 			Callback success = createCallback("receiveDecisionResponse",
-					new String[] {byte[].class.getName()}, new Object[] { null });
+					new String[] {Integer.class.getName(), byte[].class.getName()}, new Object[] { null, null });
 			makeRequest(Command.TXN, txnPkt.pack(), success, null, otherAddr, "");
 			writeOutput("(" + txnID + ") asking " + otherAddr + " for decision");
 		}
@@ -426,7 +426,7 @@ public class TransactionNode extends RPCNode {
 	 * Parses a decision request response, which could be an abort notification, commit notification
 	 * or an empty response symbolizing that the participant is waiting.
 	 */
-	public void receiveDecisionResponse(byte[] response) {
+	public void receiveDecisionResponse(Integer from, byte[] response) {
 		if (response != null && response.length > 0) {
 			TxnPacket pkt = TxnPacket.unpack(response);
 			writeOutput("(" + pkt.getID() + ") recieved decision response");

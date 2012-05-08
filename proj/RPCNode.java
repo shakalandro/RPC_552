@@ -409,7 +409,11 @@ public class RPCNode extends RIONode {
 			// If appropriate callback not null, invoke it
 			if (callback != null) {
 				try {
-					logOutput("Callback " + callback);
+					logOutput("Callback " + callback.toString());
+					Object[] params = callback.getParams();
+					for (Object param : params) {
+						logOutput("Callback param: " + param.getClass().getName());
+					}
 					callback.invoke();
 				} catch (Exception e) {
 					System.out.println(e.getLocalizedMessage());
