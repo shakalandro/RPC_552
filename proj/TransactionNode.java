@@ -619,6 +619,8 @@ public class TransactionNode extends RPCNode {
 				return Record.COMMIT;
 			} else if (s.equals(Record.ABORT.msg)) {
 				return Record.ABORT;
+			} else if (s.equals(Record.DONE.msg)) {
+				return Record.DONE;
 			} else {
 				return null;
 			}
