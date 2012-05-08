@@ -30,7 +30,7 @@ public class RPCNode extends RIONode {
 	}
 
 	public static double getRecoveryRate() {
-		return 100.0 / 100.0;
+		return 60.0 / 100.0;
 	}
 
 	public static double getDropRate() {

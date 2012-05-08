@@ -109,7 +109,7 @@ public class TransactionNode extends RPCNode {
 				for (TxnState txnState : coordinatorTxns.values()) {
 					if (txnState.status == TxnState.TxnStatus.UNKNOWN) {
 						txnLogger.logAbort(txnState);
-						sendTxnAbort(txnState.txnID);
+						sendTxnAbort(null, txnState.txnID);
 					}
 				}
 				// If the participant did not log ACCEPT or REJECT then do nothing, this will result
@@ -164,8 +164,8 @@ public class TransactionNode extends RPCNode {
 			Callback success = createCallback("receiveProposalResponse",
 					new String[] {Integer.class.getName(), byte[].class.getName()}, null);
 			// Abort the whole transaction
-			Callback failure = createCallback("sendTxnAbort", new String[] {UUID.class.getName()},
-					new Object[] {txnID});
+			Callback failure = createCallback("sendTxnAbort", new String[] {Integer.class.getName(), UUID.class.getName()},
+					new Object[] {null, txnID});
 			writeOutput("(" + txnState.txnID + ") Issuing proposal request to " + otherAddr);
 			this.makeRequest(Command.TXN, txnPkt.pack(), success, failure, otherAddr, "");
 		}
@@ -198,7 +198,7 @@ public class TransactionNode extends RPCNode {
 					sendTxnCommit(txnState.txnID);
 				} else {
 					txnLogger.logAbort(txnState);
-					sendTxnAbort(txnState.txnID);
+					sendTxnAbort(null, txnState.txnID);
 				}
 			}
 		} else {
@@ -214,7 +214,7 @@ public class TransactionNode extends RPCNode {
 		TxnState txnState = coordinatorTxns.get(txnID);
 		if (!txnState.allVotesIn() && txnState.status != TxnState.TxnStatus.ABORTED) {
 			writeOutput("(" + txnState.txnID + ") timed out waiting for proposal responses");
-			sendTxnAbort(txnID);
+			sendTxnAbort(null, txnID);
 		}
 	}
 	
@@ -236,7 +236,7 @@ public class TransactionNode extends RPCNode {
 	/*
 	 * Notifies all participants that accepted the proposal of an abort decision.
 	 */
-	public void sendTxnAbort(UUID txnID) {
+	public void sendTxnAbort(Integer errorcode, UUID txnID) {
 		writeOutput("(" + txnID + ") txn abort decided");
 		
 		// Need to get the request name.
