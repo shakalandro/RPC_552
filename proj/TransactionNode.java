@@ -463,17 +463,21 @@ public class TransactionNode extends RPCNode {
 	public TxnPacket receiveTxnDecisionRequest(TxnPacket pkt) {
 		// respond with status if we know it
 		TxnState txnState = participantTxns.get(pkt.getID());
-		writeOutput("(" + txnState.txnID + ") recieved decision request");
-		if (txnState.status == TxnState.TxnStatus.ABORTED) {
-			writeOutput("(" + txnState.txnID + ") responding to decision request with abort");
-			return TxnPacket.getAbortPacket(this, txnState.txnID, txnState.request);
-		} else if (txnState.status == TxnState.TxnStatus.COMMITTED) {
-			writeOutput("(" + txnState.txnID + ") responding to decision request with commit");
-			return TxnPacket.getCommitPacket(this, txnState.txnID, txnState.request, txnState.args);
+		if (txnState != null) {
+			writeOutput("(" + txnState.txnID + ") recieved decision request");
+			if (txnState.status == TxnState.TxnStatus.ABORTED) {
+				writeOutput("(" + txnState.txnID + ") responding to decision request with abort");
+				return TxnPacket.getAbortPacket(this, txnState.txnID, txnState.request);
+			} else if (txnState.status == TxnState.TxnStatus.COMMITTED) {
+				writeOutput("(" + txnState.txnID + ") responding to decision request with commit");
+				return TxnPacket.getCommitPacket(this, txnState.txnID, txnState.request, txnState.args);
+			}
+			writeOutput("(" + txnState.txnID + ") could not respond to decision request, my status: "
+					+ txnState.status);
+		} else {
+			writeOutput("(" + pkt.getID() + ") could not respond to decision request, never heard of txn");
 		}
 		// Return null to RPC layer if we don't know what happened.
-		writeOutput("(" + txnState.txnID + ") could not respond to decision request, my status: "
-					+ txnState.status);
 		return null;
 	}
 		
