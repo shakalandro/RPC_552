@@ -852,7 +852,7 @@ public class FacebookNode extends TransactionNode {
 		Object[] nameArray = names.toArray();
 		String[] stringNameArray = Arrays.copyOf(nameArray, nameArray.length, String[].class);
 		String gluedNames = StringUtils.join(stringNameArray, ";");
-		return gluedNames + "||" + message.trim();
+		return gluedNames + "||" + message;
 	}
 	
 	/**

@@ -457,6 +457,7 @@ public class TransactionNode extends RPCNode {
 	public TxnPacket receiveTxnDecisionRequest(TxnPacket pkt) {
 		// respond with status if we know it
 		TxnState txnState = participantTxns.get(pkt.getID());
+		writeOutput("(" + txnState.txnID + ") received decision request");
 		if (txnState.status == TxnState.TxnStatus.ABORTED) {
 			writeOutput("(" + txnState.txnID + ") responding to decision request with abort");
 			return TxnPacket.getAbortPacket(this, txnState.txnID, txnState.request);
