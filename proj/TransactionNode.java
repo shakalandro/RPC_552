@@ -419,13 +419,11 @@ public class TransactionNode extends RPCNode {
 		if (txnState.status == TxnState.TxnStatus.WAITING) {
 			writeOutput("(" + txnID + ") starting termination protocol");
 			for (Integer otherAddr : txnState.participants) {
-				if (otherAddr != this.addr) {
-					TxnPacket txnPkt = TxnPacket.getDecisionRequestPacket(this, txnID);
-					Callback success = createCallback("receiveDecisionResponse",
-							new String[] {Integer.class.getName(), byte[].class.getName()}, new Object[] { null, null });
-					makeRequest(Command.TXN, txnPkt.pack(), success, null, otherAddr, "");
-					writeOutput("(" + txnID + ") asking " + otherAddr + " for decision");
-				}
+				TxnPacket txnPkt = TxnPacket.getDecisionRequestPacket(this, txnID);
+				Callback success = createCallback("receiveDecisionResponse",
+						new String[] {Integer.class.getName(), byte[].class.getName()}, new Object[] { null, null });
+				makeRequest(Command.TXN, txnPkt.pack(), success, null, otherAddr, "");
+				writeOutput("(" + txnID + ") asking " + otherAddr + " for decision");
 			}
 			Callback decisionTimeout = createCallback("resendDecisionRequest",
 					new String[] {UUID.class.getName()}, new Object[] {txnID});
