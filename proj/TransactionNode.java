@@ -123,7 +123,7 @@ public class TransactionNode extends RPCNode {
 					if (txnState.status == TxnState.TxnStatus.WAITING) {
 						sendDecisionRequest(txnState.txnID);
 					} else if (txnState.status == TxnState.TxnStatus.ABORTED) {
-						recieveTxnAbort(TxnPacket.getAbortPacket(this, txnState.txnID));
+						recieveTxnAbort(TxnPacket.getAbortPacket(this, txnState.txnID, txnState.request));
 					} else if (txnState.status == TxnState.TxnStatus.COMMITTED) {
 						recieveTxnCommit(TxnPacket.getCommitPacket(this, txnState.txnID,
 								txnState.request, txnState.args));
@@ -232,8 +232,12 @@ public class TransactionNode extends RPCNode {
 	 */
 	public void sendTxnAbort(UUID txnID) {
 		writeOutput("(" + txnID + ") txn abort decided");
+		
+		// Need to get the request name.
+		TxnState txnState = coordinatorTxns.get(txnID);
+		
 		for (Integer otherAddr : coordinatorTxns.get(txnID).getAcceptors()) {
-			TxnPacket txnPkt = TxnPacket.getAbortPacket(this, txnID);
+			TxnPacket txnPkt = TxnPacket.getAbortPacket(this, txnID, txnState.request);
 			makeRequest(Command.TXN, txnPkt.pack(), null, null, otherAddr, "");
 			writeOutput("(" + txnID + ") sending abort message to " + otherAddr);
 		}
@@ -368,7 +372,7 @@ public class TransactionNode extends RPCNode {
 		txnState.status = TxnState.TxnStatus.ABORTED;
 		String request = pkt.getRequest();
 		try {
-			writeOutput("(" + txnState.txnID + ") recieved abort");
+			writeOutput("(" + txnState.txnID + ") recieved abort for request: " + request);
 			Class<? extends TransactionNode> me = this.getClass();
 			Method handler = me.getDeclaredMethod(ABORT_PREFIX + request, java.util.UUID.class,
 					java.lang.String.class);
@@ -376,6 +380,8 @@ public class TransactionNode extends RPCNode {
 			txnLogger.logDone(txnState);
 			writeOutput("(" + txnState.txnID + " aborted successfully");
 		} catch (NoSuchMethodException e) {
+			writeError(e.getLocalizedMessage());
+			e.printStackTrace();
 			writeError("There is no handler for transaction abort: " + request);
 			fail();
 		} catch (IllegalArgumentException e) {
@@ -399,7 +405,7 @@ public class TransactionNode extends RPCNode {
 		for (Integer otherAddr : txnState.participants) {
 			TxnPacket txnPkt = TxnPacket.getDecisionRequestPacket(this, txnID);
 			Callback success = createCallback("receiveDecisionResponse",
-					new String[] {byte[].class.getName()}, null);
+					new String[] {byte[].class.getName()}, new Object[] { null });
 			makeRequest(Command.TXN, txnPkt.pack(), success, null, otherAddr, "");
 			writeOutput("(" + txnID + ") asking " + otherAddr + " for decision");
 		}
@@ -439,7 +445,7 @@ public class TransactionNode extends RPCNode {
 		TxnState txnState = participantTxns.get(pkt.getID());
 		if (txnState.status == TxnState.TxnStatus.ABORTED) {
 			writeOutput("(" + txnState.txnID + ") responding to decision request with abort");
-			return TxnPacket.getAbortPacket(this, txnState.txnID);
+			return TxnPacket.getAbortPacket(this, txnState.txnID, txnState.request);
 		} else if (txnState.status == TxnState.TxnStatus.COMMITTED) {
 			writeOutput("(" + txnState.txnID + ") responding to decision request with commit");
 			return TxnPacket.getCommitPacket(this, txnState.txnID, txnState.request, txnState.args);
