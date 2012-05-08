@@ -396,6 +396,7 @@ public class TransactionNode extends RPCNode {
 			writeError("The abort handler for \"" + request + "\" does not take correct parameters.");
 			fail();
 		} catch (Exception e) {
+			e.printStackTrace();
 			writeError("There was an issue invoking the abort handler for: " + request +
 					"\n" + e.getMessage());
 			this.fail();
@@ -465,6 +466,7 @@ public class TransactionNode extends RPCNode {
 			return TxnPacket.getCommitPacket(this, txnState.txnID, txnState.request, txnState.args);
 		}
 		// Return null to RPC layer if we don't know what happened.
+		writeOutput("I don't know the outcome of that transaction...");
 		return null;
 	}
 		
