@@ -395,6 +395,7 @@ public class TransactionNode extends RPCNode {
 			writeError("The abort handler for \"" + request + "\" does not take correct parameters.");
 			fail();
 		} catch (Exception e) {
+			e.printStackTrace();
 			writeError("There was an issue invoking the abort handler for: " + request +
 					"\n" + e.getMessage());
 			this.fail();
