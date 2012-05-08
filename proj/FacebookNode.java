@@ -828,21 +828,7 @@ public class FacebookNode extends TransactionNode {
 	 */
 	public void abortWallPost(UUID txnId, String args) throws SecurityException, ClassNotFoundException, NoSuchMethodException, IllegalAccessException, InvocationTargetException {
 		if (addr == CLIENT_ID) {
-			printError("Failure to write to walls. Trying again now.");
-			// Since we already have the friend list and such, we can actually skip ahead and
-			// use the info we already have without having to do a GET for the friend list.
-			Object[] info = parseArgs(args);
-			
-			@SuppressWarnings("unchecked")
-			List<String> friends = (List<String>) info[0];
-			String friendString = StringUtils.join(friends, ' ');
-			String message = (String) info[1];
-			
-			Callback retryTimeout = createCallback("addMessageToAllWalls",
-					new String[] {Integer.class.getName(), byte[].class.getName(), 
-					String.class.getName()}, new Object[] {null,
-							Utility.stringToByteArray(friendString), message});
-			addTimeout(retryTimeout, RETRY_TRANSACTION_TIMEOUT);
+			printError("Failure to write to walls. Trying again if you desire.");
 		}
 	}
 	
