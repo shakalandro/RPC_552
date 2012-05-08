@@ -32,9 +32,9 @@ public class TransactionNode extends RPCNode {
 	public static final String COMMIT_PREFIX = "commit";
 	public static final String ABORT_PREFIX = "abort";
 	
-	public static final int PROPOSAL_RESPONSE_TIMEOUT = 20;
-	public static final int DECISION_TIMEOUT = 20;
-	public static final int DECISION_RESEND_TIMEOUT = 20;
+	public static final int PROPOSAL_RESPONSE_TIMEOUT = 40;
+	public static final int DECISION_TIMEOUT = 40;
+	public static final int DECISION_RESEND_TIMEOUT = 40;
 	public static final String LOG_FILE = ".txn_log";
 	
 	public Map<UUID, TxnState> coordinatorTxns;
