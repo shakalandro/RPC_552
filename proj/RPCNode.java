@@ -1,6 +1,5 @@
 import java.io.IOException;
 import java.io.PrintStream;
-import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -27,11 +26,11 @@ public class RPCNode extends RIONode {
 	// public static double getDropRate() { return MessageLayer.rpcDrop / 100.0; }
 	// public static double getDelayRate() { return MessageLayer.rpcDelay / 100.0; }
 	public static double getFailureRate() {
-		return 0 / 100.0;
+		return .1 / 100.0;
 	}
 
 	public static double getRecoveryRate() {
-		return 100.0 / 100.0;
+		return 60.0 / 100.0;
 	}
 
 	public static double getDropRate() {
