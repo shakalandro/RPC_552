@@ -796,7 +796,7 @@ public class FacebookNode extends TransactionNode {
 					} else {
 						contents = new String(buf, 0, length);
 					}
-					contents += message;
+					contents += message + '\n';
 					
 					// Write message contents to the temp file.
 					// Then write the message contents to the master file. If we go down in-between, we can
