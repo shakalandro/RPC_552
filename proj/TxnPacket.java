@@ -31,8 +31,8 @@ public class TxnPacket {
     	return TxnPacket.getPacket(node, txnID, TxnProtocol.TXN_DECISION_REQ, null, "", "");
     }
     
-    public static TxnPacket getAbortPacket(TransactionNode node, UUID txnID) {
-    	return TxnPacket.getPacket(node, txnID, TxnProtocol.TXN_ABORT, null, "", "");
+    public static TxnPacket getAbortPacket(TransactionNode node, UUID txnID, String request) {
+    	return TxnPacket.getPacket(node, txnID, TxnProtocol.TXN_ABORT, null, request, "");
     }
     
     public static TxnPacket getCommitPacket(TransactionNode node, UUID txnID,
