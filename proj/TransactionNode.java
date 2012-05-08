@@ -51,7 +51,6 @@ public class TransactionNode extends RPCNode {
 		this.coordinatorTxns = new HashMap<UUID, TxnState>();
 		this.participantTxns = new HashMap<UUID, TxnState>();
 		this.logFile = LOG_FILE + addr;
-		this.txnLogger = new TxnLog(this.logFile, this);
 		try {
 			if (Utility.fileExists(this, this.logFile)) {
 				writeOutput("Starting txn recovery");
@@ -141,6 +140,7 @@ public class TransactionNode extends RPCNode {
 			e.printStackTrace();
 			fail();
 		}
+		this.txnLogger = new TxnLog(this.logFile, this);
 	}
 	
 	////////////////////////////////// Coordinator Code //////////////////////////////////////////
