@@ -426,9 +426,9 @@ public class TransactionNode extends RPCNode {
 	}
 	
 	public void resendDecisionRequest(UUID txnID) {
-		writeOutput("(" + txnID + ") restarting termination protocol");
 		TxnState txnState = participantTxns.get(txnID);
 		if (txnState.status == TxnState.TxnStatus.WAITING) {
+			writeOutput("(" + txnID + ") restarting termination protocol");
 			sendDecisionRequest(txnID);
 		}
 	}
@@ -457,9 +457,7 @@ public class TransactionNode extends RPCNode {
 	public TxnPacket receiveTxnDecisionRequest(TxnPacket pkt) {
 		// respond with status if we know it
 		TxnState txnState = participantTxns.get(pkt.getID());
-		writeOutput("Just received a request for the transaction decision...");
-		writeOutput("The status of transaction " + txnState.txnID + " is " + txnState.status);
-
+		writeOutput("(" + txnState.txnID + ") recieved decision request");
 		if (txnState.status == TxnState.TxnStatus.ABORTED) {
 			writeOutput("(" + txnState.txnID + ") responding to decision request with abort");
 			return TxnPacket.getAbortPacket(this, txnState.txnID, txnState.request);
@@ -468,7 +466,8 @@ public class TransactionNode extends RPCNode {
 			return TxnPacket.getCommitPacket(this, txnState.txnID, txnState.request, txnState.args);
 		}
 		// Return null to RPC layer if we don't know what happened.
-		writeOutput("I don't know the outcome of that transaction...");
+		writeOutput("(" + txnState.txnID + ") could not respond to decision request, my status: "
+					+ txnState.status);
 		return null;
 	}
 		
