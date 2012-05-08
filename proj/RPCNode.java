@@ -401,6 +401,8 @@ public class RPCNode extends RIONode {
 				if (status == Status.CRASH) {
 					serverSessionIDs.put(from,
 							Integer.parseInt(Utility.byteArrayToString(pkt.getPayload())));
+					logOutput("Received crash message from Node " + from +
+							", updating Node " + from + " session id to " + serverSessionIDs.get(from));
 				}
 
 				callback = request.failure;
@@ -466,6 +468,7 @@ public class RPCNode extends RIONode {
                     Status.SUCCESS,
                     Utility.stringToByteArray(mySessionID + ""));
         } else if (pkt.serverSessionID() != mySessionID) {
+        	logOutput("Crash detected, sending new session id: " + mySessionID);
             // Session IDs don't match
             result = RPCResultPacket.getPacket(this, pkt.getRequestID(),
                     Status.CRASH,
