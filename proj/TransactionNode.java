@@ -244,8 +244,8 @@ public class TransactionNode extends RPCNode {
 		
 		for (Integer otherAddr : coordinatorTxns.get(txnID).getAcceptors()) {
 			TxnPacket txnPkt = TxnPacket.getAbortPacket(this, txnID, txnState.request);
-			makeRequest(Command.TXN, txnPkt.pack(), null, null, otherAddr, "");
 			writeOutput("(" + txnID + ") sending abort message to " + otherAddr);
+			makeRequest(Command.TXN, txnPkt.pack(), null, null, otherAddr, "");
 		}
 		coordinatorTxns.get(txnID).status = TxnState.TxnStatus.ABORTED;
 	}
@@ -259,7 +259,8 @@ public class TransactionNode extends RPCNode {
 	public int numUnfinishedTxns() {
 		int count = 0;
 		for (TxnState txnState : participantTxns.values()) {
-			if (txnState.status != TxnState.TxnStatus.DONE) {
+			if (txnState.status != TxnState.TxnStatus.COMMITTED &&
+					txnState.status != TxnState.TxnStatus.ABORTED) {
 				count++;
 			}
 		}
@@ -347,7 +348,6 @@ public class TransactionNode extends RPCNode {
 			Method handler = me.getDeclaredMethod(COMMIT_PREFIX + request, java.util.UUID.class,
 					java.lang.String.class);
 			handler.invoke(this, txnState.txnID, pkt.getPayload());
-			txnState.status = TxnState.TxnStatus.DONE;
 			txnLogger.logDone(txnState);
 			writeOutput("(" + txnState.txnID + ") committed successfully");
 		} catch (NoSuchMethodException e) {
@@ -385,7 +385,6 @@ public class TransactionNode extends RPCNode {
 			Method handler = me.getDeclaredMethod(ABORT_PREFIX + request, java.util.UUID.class,
 					java.lang.String.class);
 			handler.invoke(this, txnState.txnID, txnState.args);
-			txnState.status = TxnState.TxnStatus.DONE;
 			txnLogger.logDone(txnState);
 			writeOutput("(" + txnState.txnID + " aborted successfully");
 		} catch (NoSuchMethodException e) {
