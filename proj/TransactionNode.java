@@ -207,7 +207,7 @@ public class TransactionNode extends RPCNode {
 	 */
 	public void proposalTimeoutAbort(UUID txnID) {
 		TxnState txnState = coordinatorTxns.get(txnID);
-		if (!txnState.allVotesIn()) {
+		if (!txnState.allVotesIn() && txnState.status != TxnState.TxnStatus.ABORTED) {
 			writeOutput("(" + txnState.txnID + ") timed out waiting for proposal responses");
 			sendTxnAbort(txnID);
 		}
@@ -225,6 +225,7 @@ public class TransactionNode extends RPCNode {
 			makeRequest(Command.TXN, txnPkt.pack(), null, null, otherAddr, "");
 			writeOutput("(" + txnID + ") sending commit message to " + otherAddr);
 		}
+		txnState.status = TxnState.TxnStatus.COMMITTED;
 	}
 	
 	/*
@@ -237,6 +238,7 @@ public class TransactionNode extends RPCNode {
 			makeRequest(Command.TXN, txnPkt.pack(), null, null, otherAddr, "");
 			writeOutput("(" + txnID + ") sending abort message to " + otherAddr);
 		}
+		coordinatorTxns.get(txnID).status = TxnState.TxnStatus.ABORTED;
 	}
 	
 	////////////////////////////////// Participant Code //////////////////////////////////////////
