@@ -324,23 +324,20 @@ public class RPCNode extends RIONode {
         
         pkt.setServerSessionID(serverSessionIDs.get(request.serverAddr));
         
-        if (request.serverAddr == addr) {
-        	handleRPCrequest(addr, pkt); 
-        } else {
-        	RIOSend(request.serverAddr, Protocol.RPC_REQUEST_PKT, pkt.pack());
 
-        	// Set timeout to retry this method in TIMEOUT steps, will trigger
-        	// infinite timeouts
-        	Method method = null;
-        	try {
-        		method = Callback.getMethod("attemptToSend", this, new String[] { "RPCRequest" });
-        	} catch (Exception e) {
-        		// TODO Auto-generated catch block
-        		e.printStackTrace();
-        	}
-        	Object[] params = { request };
-        	addTimeout(new Callback(method, this, params), TIMEOUT_INTERVAL);
+        RIOSend(request.serverAddr, Protocol.RPC_REQUEST_PKT, pkt.pack());
+
+        // Set timeout to retry this method in TIMEOUT steps, will trigger
+        // infinite timeouts
+        Method method = null;
+        try {
+        	method = Callback.getMethod("attemptToSend", this, new String[] { "RPCRequest" });
+        } catch (Exception e) {
+        	// TODO Auto-generated catch block
+        	e.printStackTrace();
         }
+        Object[] params = { request };
+        addTimeout(new Callback(method, this, params), TIMEOUT_INTERVAL);
     }
 
     /**
@@ -486,12 +483,9 @@ public class RPCNode extends RIONode {
 
         storedResults.put(from, result);
 
-        if (from == addr) {
-        	handleRPCresult(addr, result);
-        } else {
-        	// Send response
-        	RIOSend(from, Protocol.RPC_RESULT_PKT, result.pack());
-        }
+
+        // Send response
+        RIOSend(from, Protocol.RPC_RESULT_PKT, result.pack());
     }
     
     /**
