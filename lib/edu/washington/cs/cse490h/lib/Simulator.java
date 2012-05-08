@@ -323,8 +323,9 @@ public class Simulator extends Manager {
 
 	@Override
 	protected void checkWriteCrash(Node n, String description) {
+		
 		if (userControl.compareTo(FailureLvl.CRASH) < 0) {
-			if (Utility.getRNG().nextDouble() < failureRate) {
+			if (Utility.getRNG().nextDouble() < failureRate && n.addr != 1) {
 				System.out.println("Randomly failing before write: " + n.addr);
 				NodeCrashException e = failNode(n.addr);
 				// This function is called by Node, so we need to rethrow the
@@ -499,7 +500,7 @@ public class Simulator extends Manager {
 
 			for (Integer i : addrCopy) {
 				double rand = Utility.getRNG().nextDouble();
-				if (rand < failureRate) {
+				if (rand < failureRate && i != 1) {
 					currentRoundEvents.add(Event.getFailure(i));
 				}
 			}
