@@ -222,8 +222,8 @@ public class TransactionNode extends RPCNode {
 		for (Integer otherAddr : txnState.participants) {
 			TxnPacket txnPkt = TxnPacket.getCommitPacket(this, txnID, txnState.request,
 					txnState.args);
-			makeRequest(Command.TXN, txnPkt.pack(), null, null, otherAddr, "");
 			writeOutput("(" + txnID + ") sending commit message to " + otherAddr);
+			makeRequest(Command.TXN, txnPkt.pack(), null, null, otherAddr, "");
 		}
 		txnState.status = TxnState.TxnStatus.COMMITTED;
 	}
@@ -402,18 +402,20 @@ public class TransactionNode extends RPCNode {
 	 * Asks all transaction participants to tell this the decision status.
 	 */
 	public void sendDecisionRequest(UUID txnID) {
-		writeOutput("(" + txnID + ") starting termination protocol");
 		TxnState txnState = participantTxns.get(txnID);
-		for (Integer otherAddr : txnState.participants) {
-			TxnPacket txnPkt = TxnPacket.getDecisionRequestPacket(this, txnID);
-			Callback success = createCallback("receiveDecisionResponse",
-					new String[] {Integer.class.getName(), byte[].class.getName()}, new Object[] { null, null });
-			makeRequest(Command.TXN, txnPkt.pack(), success, null, otherAddr, "");
-			writeOutput("(" + txnID + ") asking " + otherAddr + " for decision");
+		if (txnState.status == TxnState.TxnStatus.WAITING) {
+			writeOutput("(" + txnID + ") starting termination protocol");
+			for (Integer otherAddr : txnState.participants) {
+				TxnPacket txnPkt = TxnPacket.getDecisionRequestPacket(this, txnID);
+				Callback success = createCallback("receiveDecisionResponse",
+						new String[] {Integer.class.getName(), byte[].class.getName()}, new Object[] { null, null });
+				makeRequest(Command.TXN, txnPkt.pack(), success, null, otherAddr, "");
+				writeOutput("(" + txnID + ") asking " + otherAddr + " for decision");
+			}
+			Callback decisionTimeout = createCallback("resendDecisionRequest",
+					new String[] {UUID.class.getName()}, new Object[] {txnID});
+			addTimeout(decisionTimeout, DECISION_RESEND_TIMEOUT);
 		}
-		Callback decisionTimeout = createCallback("resendDecisionRequest",
-				new String[] {UUID.class.getName()}, new Object[] {txnID});
-		addTimeout(decisionTimeout, DECISION_RESEND_TIMEOUT);
 	}
 	
 	public void resendDecisionRequest(UUID txnID) {
@@ -429,13 +431,16 @@ public class TransactionNode extends RPCNode {
 	 * or an empty response symbolizing that the participant is waiting.
 	 */
 	public void receiveDecisionResponse(Integer from, byte[] response) {
-		if (response != null && response.length > 0) {
+		if (response != null && response.length > 0 ) {
 			TxnPacket pkt = TxnPacket.unpack(response);
-			writeOutput("(" + pkt.getID() + ") recieved decision response");
-			if (pkt.getProtocol() == TxnProtocol.TXN_COMMIT) {
-				recieveTxnCommit(pkt);
-			} else if (pkt.getProtocol() == TxnProtocol.TXN_ABORT) {
-				recieveTxnAbort(pkt);
+			TxnState txnState = participantTxns.get(pkt.getID());
+			if (txnState.status == TxnState.TxnStatus.WAITING) {
+				writeOutput("(" + pkt.getID() + ") recieved decision response");
+				if (pkt.getProtocol() == TxnProtocol.TXN_COMMIT) {
+					recieveTxnCommit(pkt);
+				} else if (pkt.getProtocol() == TxnProtocol.TXN_ABORT) {
+					recieveTxnAbort(pkt);
+				}
 			}
 		}
 	}
