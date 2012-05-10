@@ -142,7 +142,6 @@ public class ReliableInOrderMsgLayer {
 			sessionIds.put(destAddr, newSessionId);
 			
 			n.send(destAddr, Protocol.SYNC, Utility.stringToByteArray(String.valueOf(newSessionId)));
-			return;
 		}
 
 		OutChannel out = outConnections.get(destAddr);
