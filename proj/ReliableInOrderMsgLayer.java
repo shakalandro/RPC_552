@@ -96,7 +96,7 @@ public class ReliableInOrderMsgLayer {
 			return;
 		}
 
-		// verify that we received this sent node.
+		// Verify that we received this sent node.
 		byte[] seqNumByteArray = Utility.stringToByteArray("" + riopkt.getSeqNum());
 		n.send(from, Protocol.ACK, seqNumByteArray);
 
@@ -142,6 +142,7 @@ public class ReliableInOrderMsgLayer {
 			sessionIds.put(destAddr, newSessionId);
 			
 			n.send(destAddr, Protocol.SYNC, Utility.stringToByteArray(String.valueOf(newSessionId)));
+			return;
 		}
 
 		OutChannel out = outConnections.get(destAddr);
