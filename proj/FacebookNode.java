@@ -1177,7 +1177,7 @@ public class FacebookNode extends TransactionNode {
 						"edu.washington.cs.cse490h.lib.Callback" };
 		Method tryAgain = Callback.getMethod("checkForNameInList", this, failParamTypes);
 		Object[] failParams =
-				{ null, userName, filename, null, userExistsCallback, userNoExistsCallback };
+				{ null, userName, filename, serverId, userExistsCallback, userNoExistsCallback };
 		Callback tryAgainCallback = new Callback(tryAgain, this, failParams);
 
 		// Create a success callback that checks the retrieved file for userName;
@@ -1189,6 +1189,7 @@ public class FacebookNode extends TransactionNode {
 		Callback checkForNameCallback = new Callback(checkForName, this, p);
 
 		// We need to fetch the contents of the friends file for this user.
+		printOutput("About to call the get rpc in checkForNameInList.");
 		get(serverId, filename, checkForNameCallback, tryAgainCallback);
 	}
 	
