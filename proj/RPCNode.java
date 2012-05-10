@@ -25,6 +25,7 @@ public class RPCNode extends RIONode {
 	 public static double getRecoveryRate() { return MessageLayer.rpcRecover / 100.0; }
 	 public static double getDropRate() { return MessageLayer.rpcDrop / 100.0; }
 	 public static double getDelayRate() { return MessageLayer.rpcDelay / 100.0; }
+
 //	public static double getFailureRate() {
 //		return 1 / 100.0;
 //	}
@@ -327,6 +328,7 @@ public class RPCNode extends RIONode {
         
         pkt.setServerSessionID(serverSessionIDs.get(request.serverAddr));
         
+        logOutput("SENDING to Node " + request.serverAddr + ": " + pkt.toString());
         RIOSend(request.serverAddr, Protocol.RPC_REQUEST_PKT, pkt.pack());
 
         // Set timeout to retry this method in TIMEOUT steps, will trigger
@@ -489,6 +491,7 @@ public class RPCNode extends RIONode {
 
 
         // Send response
+        logOutput("SENDING to Node " + from + ": " + pkt.toString());
         RIOSend(from, Protocol.RPC_RESULT_PKT, result.pack());
     }
     
