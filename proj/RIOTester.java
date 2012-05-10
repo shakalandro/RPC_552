@@ -30,7 +30,7 @@ public class RIOTester extends RIONode {
     private int numFinished;
 
     public static int NUM_NODES = 10;
-    public static int NUM_MESSAGES = 100;
+    public static int NUM_MESSAGES = 1000;
 
     private boolean failed = false;
 
@@ -78,9 +78,7 @@ public class RIOTester extends RIONode {
         }
         Integer i = Integer.parseInt(Utility.byteArrayToString(msg));
         Integer receivedNum = receivedNums.get(from);
-        if (i == receivedNum + 1) {
-            correctReceive(from, i);
-        } else {
+        if (i <= receivedNum) {
             failure(from, i);
         }
     }
@@ -109,7 +107,7 @@ public class RIOTester extends RIONode {
      */
     public void failure(int from, int i) {
         logError("FAILURE OF THE RIO MESSAGE LAYER!!  Received " + i
-                + " instead of " + receivedNums.get(from) + " from " + from);
+                + " instead of " + (receivedNums.get(from)  + 1) + " from " + from);
         receivedNums.put(from, i);
         failed = true;
         fail();

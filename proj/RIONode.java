@@ -23,6 +23,8 @@ public abstract class RIONode extends Node {
 			RIOLayer.RIODataReceive(from, msg);
 		}else if(protocol == Protocol.ACK) {
 			RIOLayer.RIOAckReceive(from, msg);
+		} else if (protocol == Protocol.SYNC){
+			RIOLayer.RIOSyncReceive(from, msg);
 		}
 	}
 
