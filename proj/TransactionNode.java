@@ -32,9 +32,9 @@ public class TransactionNode extends RPCNode {
 	public static final String COMMIT_PREFIX = "commit";
 	public static final String ABORT_PREFIX = "abort";
 	
-	public static final int PROPOSAL_RESPONSE_TIMEOUT = 20;
-	public static final int DECISION_TIMEOUT = 20;
-	public static final int DECISION_RESEND_TIMEOUT = 20;
+	public static final int PROPOSAL_RESPONSE_TIMEOUT = 40;
+	public static final int DECISION_TIMEOUT = 40;
+	public static final int DECISION_RESEND_TIMEOUT = 40;
 	public static final String LOG_FILE = ".txn_log";
 	
 	public Map<UUID, TxnState> coordinatorTxns;
@@ -54,9 +54,11 @@ public class TransactionNode extends RPCNode {
 		this.txnLogger = new TxnLog(this.logFile, this);
 		try {
 			if (Utility.fileExists(this, this.logFile)) {
+				writeOutput("Starting txn recovery");
 				PersistentStorageReader reader =  getReader(this.logFile);
 				while (reader.ready()) {
 					String line = reader.readLine();
+					writeOutput("Txn recovery log message: " + line);
 					String[] parts = line.split(" ", 2);
 					TxnLog.Record r = TxnLog.parseRecordType(parts[0]);
 					String txnRecordData = parts[1];
@@ -109,6 +111,7 @@ public class TransactionNode extends RPCNode {
 				for (TxnState txnState : coordinatorTxns.values()) {
 					if (txnState.status == TxnState.TxnStatus.UNKNOWN) {
 						txnLogger.logAbort(txnState);
+						writeOutput("(" + txnState.txnID + ") recovery aborting");
 						sendTxnAbort(null, txnState.txnID);
 					}
 				}
@@ -121,10 +124,13 @@ public class TransactionNode extends RPCNode {
 				// 		termination protocol.
 				for (TxnState txnState : participantTxns.values()) {
 					if (txnState.status == TxnState.TxnStatus.WAITING) {
+						writeOutput("(" + txnState.txnID + ") recovery decision request needed");
 						sendDecisionRequest(txnState.txnID);
 					} else if (txnState.status == TxnState.TxnStatus.ABORTED) {
+						writeOutput("(" + txnState.txnID + ") recovery abort handler called");
 						recieveTxnAbort(TxnPacket.getAbortPacket(this, txnState.txnID, txnState.request));
 					} else if (txnState.status == TxnState.TxnStatus.COMMITTED) {
+						writeOutput("(" + txnState.txnID + ") recovery commit handler called");
 						recieveTxnCommit(TxnPacket.getCommitPacket(this, txnState.txnID,
 								txnState.request, txnState.args));
 					}
@@ -461,17 +467,21 @@ public class TransactionNode extends RPCNode {
 		}
 		
 		TxnState txnState = participantTxns.get(pkt.getID());
-		writeOutput("(" + txnState.txnID + ") recieved decision request");
-		if (txnState.status == TxnState.TxnStatus.ABORTED) {
-			writeOutput("(" + txnState.txnID + ") responding to decision request with abort");
-			return TxnPacket.getAbortPacket(this, txnState.txnID, txnState.request);
-		} else if (txnState.status == TxnState.TxnStatus.COMMITTED) {
-			writeOutput("(" + txnState.txnID + ") responding to decision request with commit");
-			return TxnPacket.getCommitPacket(this, txnState.txnID, txnState.request, txnState.args);
+		if (txnState != null) {
+			writeOutput("(" + txnState.txnID + ") recieved decision request");
+			if (txnState.status == TxnState.TxnStatus.ABORTED) {
+				writeOutput("(" + txnState.txnID + ") responding to decision request with abort");
+				return TxnPacket.getAbortPacket(this, txnState.txnID, txnState.request);
+			} else if (txnState.status == TxnState.TxnStatus.COMMITTED) {
+				writeOutput("(" + txnState.txnID + ") responding to decision request with commit");
+				return TxnPacket.getCommitPacket(this, txnState.txnID, txnState.request, txnState.args);
+			}
+			writeOutput("(" + txnState.txnID + ") could not respond to decision request, my status: "
+					+ txnState.status);
+		} else {
+			writeOutput("(" + pkt.getID() + ") could not respond to decision request, never heard of txn");
 		}
 		// Return null to RPC layer if we don't know what happened.
-		writeOutput("(" + txnState.txnID + ") could not respond to decision request, my status: "
-					+ txnState.status);
 		return null;
 	}
 		
