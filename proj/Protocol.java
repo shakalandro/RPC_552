@@ -11,6 +11,7 @@ public class Protocol {
     // something else
     public static final int DATA = 0;
     public static final int ACK = 1;
+    public static final int SYNC = 2;
 
     // Protocols for Testing Reliable in-order message delivery
     // These should be RIOPacket protocols
@@ -30,7 +31,7 @@ public class Protocol {
      * @return true if the protocol is valid, false otherwise
      */
     public static boolean isPktProtocolValid(int protocol) {
-        return (protocol == DATA || protocol == ACK);
+        return (protocol == DATA || protocol == ACK || protocol == SYNC);
     }
 
     /**
@@ -88,6 +89,8 @@ public class Protocol {
             return "RIO Data Packet";
         case ACK:
             return "RIO Acknowledgement Packet";
+        case SYNC:
+        	return "RIO Sync Packet";
         case RIOTEST_PKT:
             return "RIO Testing Packet";
         case RPC_REQUEST_PKT:
