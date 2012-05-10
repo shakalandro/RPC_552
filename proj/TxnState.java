@@ -65,6 +65,11 @@ class TxnState {
 			responses.put(from, false);
 		}
 		
+		public void setStatus(TxnStatus newStatus) {
+			System.out.println("Changing status to " + newStatus);
+			this.status = newStatus;
+		}
+		
 		/*
 		 * Returns a string of the form suitable for logging Records.
 		 * 

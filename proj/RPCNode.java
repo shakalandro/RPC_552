@@ -21,26 +21,26 @@ import edu.washington.cs.cse490h.lib.Utility;
 public class RPCNode extends RIONode {
 
 	/** Set failure/recovery/delay/drop rates based on command line options, default == 0% */
-	 public static double getFailureRate() { return MessageLayer.rpcFail / 100.0; }
-	 public static double getRecoveryRate() { return MessageLayer.rpcRecover / 100.0; }
-	 public static double getDropRate() { return MessageLayer.rpcDrop / 100.0; }
-	 public static double getDelayRate() { return MessageLayer.rpcDelay / 100.0; }
+//	 public static double getFailureRate() { return MessageLayer.rpcFail / 100.0; }
+//	 public static double getRecoveryRate() { return MessageLayer.rpcRecover / 100.0; }
+//	 public static double getDropRate() { return MessageLayer.rpcDrop / 100.0; }
+//	 public static double getDelayRate() { return MessageLayer.rpcDelay / 100.0; }
 
-//	public static double getFailureRate() {
-//		return 1 / 100.0;
-//	}
-//
-//	public static double getRecoveryRate() {
-//		return 60.0 / 100.0;
-//	}
-//
-//	public static double getDropRate() {
-//		return 20.0 / 100.0;
-//	}
-//
-//	public static double getDelayRate() {
-//		return 30.0 / 100.0;
-//	}
+	public static double getFailureRate() {
+		return 5 / 100.0;
+	}
+
+	public static double getRecoveryRate() {
+		return 60.0 / 100.0;
+	}
+
+	public static double getDropRate() {
+		return 20.0 / 100.0;
+	}
+
+	public static double getDelayRate() {
+		return 30.0 / 100.0;
+	}
 
 	/** Colors for console logging */
 	public static final boolean USE_COLORS = true;
@@ -423,13 +423,9 @@ public class RPCNode extends RIONode {
 			if (callback != null) {
 				try {
 					logOutput("Callback " + callback.toString());
-					Object[] params = callback.getParams();
-					for (Object param : params) {
-						logOutput("Callback param: " + param.getClass().getName());
-					}
 					callback.invoke();
 				} catch (Exception e) {
-					System.out.println(e.getLocalizedMessage());
+					System.out.println(e.getMessage());
 					e.printStackTrace();
 				}
 			}

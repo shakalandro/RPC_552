@@ -448,12 +448,14 @@ public class TransactionNode extends RPCNode {
 			TxnPacket pkt = TxnPacket.unpack(response);
 			TxnState txnState = participantTxns.get(pkt.getID());
 			if (txnState.status == TxnState.TxnStatus.WAITING) {
-				writeOutput("(" + pkt.getID() + ") recieved decision response");
+				writeOutput("(" + pkt.getID() + ") recieved decision response from " + from);
 				if (pkt.getProtocol() == TxnProtocol.TXN_COMMIT) {
 					recieveTxnCommit(pkt);
 				} else if (pkt.getProtocol() == TxnProtocol.TXN_ABORT) {
 					recieveTxnAbort(pkt);
 				}
+			} else {
+				writeOutput("(" + pkt.getID() + ") ignoring decision response from " + from);
 			}
 		}
 	}
