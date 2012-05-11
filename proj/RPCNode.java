@@ -196,7 +196,6 @@ public class RPCNode extends RIONode {
 
 	/** Fetches the file filename on server serverAddr */
 	protected void get(int serverAddr, String filename) {
-    	System.out.println("About to call makeRequest wrapper");
 		get(serverAddr, filename, null, null);
 	}
 
@@ -205,7 +204,6 @@ public class RPCNode extends RIONode {
      * the eventual reply
      */
     protected void get(int serverAddr, String filename, Callback success, Callback failure) {
-    	System.out.println("About to call makeRequest");
         makeRequest(Command.GET, filename, success, failure, serverAddr, filename);
     }
 

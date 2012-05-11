@@ -756,7 +756,6 @@ public class FacebookNode extends TransactionNode {
 		for (File f : oldTemps) {
 			String txnIdString = txnId.toString();
 			String fileTxnString = f.getName().substring(f.getName().indexOf("||") + 2);
-			printOutput("fileTxnString: " + fileTxnString + " vs. txnIdString: " + txnIdString);
 			if (!fileTxnString.equals(txnIdString)) {
 				// It's a temp file for a previous transaction. We can get rid of it.
 				printOutput("Deleting temp file " + f.getName());
@@ -1191,7 +1190,6 @@ public class FacebookNode extends TransactionNode {
 		Callback checkForNameCallback = new Callback(checkForName, this, p);
 
 		// We need to fetch the contents of the friends file for this user.
-		printOutput("About to call the get rpc in checkForNameInList.");
 		get(serverId, filename, checkForNameCallback, tryAgainCallback);
 	}
 	

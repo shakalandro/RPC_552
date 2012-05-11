@@ -62,7 +62,6 @@ public class ReliableInOrderMsgLayer {
 		// communication state with the sender and set the sessionId correctly.
 		int currentSessionId = sessionIds.get(from);
 		if (currentSessionId != syncId) {
-			System.out.println("SYNC IDs don't match.");
 			clearCommunicationState(from);
 			sessionIds.put(from, syncId);
 		}
