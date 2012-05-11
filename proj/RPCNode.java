@@ -6,6 +6,8 @@ import java.util.LinkedList;
 import java.util.Map;
 import java.util.Queue;
 
+import org.apache.commons.lang.exception.ExceptionUtils;
+
 import edu.washington.cs.cse490h.lib.Callback;
 import edu.washington.cs.cse490h.lib.MessageLayer;
 import edu.washington.cs.cse490h.lib.PersistentStorageReader;
@@ -194,6 +196,7 @@ public class RPCNode extends RIONode {
 
 	/** Fetches the file filename on server serverAddr */
 	protected void get(int serverAddr, String filename) {
+    	System.out.println("About to call makeRequest wrapper");
 		get(serverAddr, filename, null, null);
 	}
 
@@ -202,6 +205,7 @@ public class RPCNode extends RIONode {
      * the eventual reply
      */
     protected void get(int serverAddr, String filename, Callback success, Callback failure) {
+    	System.out.println("About to call makeRequest");
         makeRequest(Command.GET, filename, success, failure, serverAddr, filename);
     }
 
@@ -425,8 +429,7 @@ public class RPCNode extends RIONode {
 					logOutput("Callback " + callback.toString());
 					callback.invoke();
 				} catch (Exception e) {
-					System.out.println(e.getMessage());
-					e.printStackTrace();
+					ExceptionUtils.printRootCauseStackTrace(e);
 				}
 			}
 		}
