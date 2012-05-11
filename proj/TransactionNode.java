@@ -34,7 +34,7 @@ public class TransactionNode extends RPCNode {
 	public static final String COMMIT_PREFIX = "commit";
 	public static final String ABORT_PREFIX = "abort";
 	
-	public static final int PROPOSAL_RESPONSE_TIMEOUT = 40;
+	public static final int PROPOSAL_RESPONSE_TIMEOUT = 60;
 	public static final int DECISION_TIMEOUT = 40;
 	public static final int DECISION_RESEND_TIMEOUT = 40;
 	public static final String LOG_FILE = ".txn_log";
@@ -74,6 +74,7 @@ public class TransactionNode extends RPCNode {
 					// We have reached a decision, could be a coordinator and/or participant
 					case COMMIT:
 						txnState = TxnState.fromRecordString(txnRecordData);
+						txnState.wasCommitted = true;
 						if (coordinatorTxns.containsKey(txnState.txnID)) {
 							coordinatorTxns.get(txnState.txnID).status = TxnState.TxnStatus.COMMITTED;
 						}
@@ -350,6 +351,7 @@ public class TransactionNode extends RPCNode {
 	 */
 	private void recieveTxnCommit(TxnPacket pkt) {
 		TxnState txnState = participantTxns.get(pkt.getID());
+		txnState.wasCommitted = true;
 		txnLogger.logCommit(txnState);
 		txnState.status = TxnState.TxnStatus.COMMITTED;
 		String request = pkt.getRequest();
@@ -441,7 +443,7 @@ public class TransactionNode extends RPCNode {
 		if (txnState.status == TxnState.TxnStatus.WAITING) {
 			writeOutput("(" + txnID + ") restarting termination protocol");
 			sendDecisionRequest(txnID);
-		}
+		}	
 	}
 	
 	/*
@@ -480,6 +482,14 @@ public class TransactionNode extends RPCNode {
 			} else if (txnState.status == TxnState.TxnStatus.COMMITTED) {
 				writeOutput("(" + txnState.txnID + ") responding to decision request with commit");
 				return TxnPacket.getCommitPacket(this, txnState.txnID, txnState.request, txnState.args);
+			} else if (txnState.status == TxnState.TxnStatus.DONE) {
+				if (txnState.wasCommitted) {
+					writeOutput("(" + txnState.txnID + ") responding to decision request with commit");
+					return TxnPacket.getCommitPacket(this, txnState.txnID, txnState.request, txnState.args);
+				} else {
+					writeOutput("(" + txnState.txnID + ") responding to decision request with abort");
+					return TxnPacket.getAbortPacket(this, txnState.txnID, txnState.request);
+				}
 			}
 			writeOutput("(" + txnState.txnID + ") could not respond to decision request, my status: "
 					+ txnState.status);
