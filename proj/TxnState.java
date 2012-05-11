@@ -12,6 +12,8 @@ class TxnState {
 		public Map<Integer, Boolean> responses;
 		public TxnStatus status;
 		
+		public boolean wasCommitted;
+		
 		public enum TxnStatus {
 			WAITING, COMMITTED, ABORTED, DONE, UNKNOWN;
 		}

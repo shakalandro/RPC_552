@@ -6,6 +6,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
+import javax.print.attribute.standard.PrinterResolution;
+
 import edu.washington.cs.cse490h.lib.Callback;
 import edu.washington.cs.cse490h.lib.PersistentStorageReader;
 import edu.washington.cs.cse490h.lib.PersistentStorageWriter;
@@ -32,7 +34,7 @@ public class TransactionNode extends RPCNode {
 	public static final String COMMIT_PREFIX = "commit";
 	public static final String ABORT_PREFIX = "abort";
 	
-	public static final int PROPOSAL_RESPONSE_TIMEOUT = 40;
+	public static final int PROPOSAL_RESPONSE_TIMEOUT = 60;
 	public static final int DECISION_TIMEOUT = 40;
 	public static final int DECISION_RESEND_TIMEOUT = 40;
 	public static final String LOG_FILE = ".txn_log";
@@ -72,6 +74,7 @@ public class TransactionNode extends RPCNode {
 					// We have reached a decision, could be a coordinator and/or participant
 					case COMMIT:
 						txnState = TxnState.fromRecordString(txnRecordData);
+						txnState.wasCommitted = true;
 						if (coordinatorTxns.containsKey(txnState.txnID)) {
 							coordinatorTxns.get(txnState.txnID).status = TxnState.TxnStatus.COMMITTED;
 						}
@@ -265,8 +268,11 @@ public class TransactionNode extends RPCNode {
 	public int numUnfinishedTxns() {
 		int count = 0;
 		for (TxnState txnState : participantTxns.values()) {
+			
 			if (txnState.status != TxnState.TxnStatus.COMMITTED &&
-					txnState.status != TxnState.TxnStatus.ABORTED) {
+					txnState.status != TxnState.TxnStatus.ABORTED &&
+					txnState.status != TxnState.TxnStatus.DONE) {
+				
 				count++;
 			}
 		}
@@ -345,6 +351,7 @@ public class TransactionNode extends RPCNode {
 	 */
 	private void recieveTxnCommit(TxnPacket pkt) {
 		TxnState txnState = participantTxns.get(pkt.getID());
+		txnState.wasCommitted = true;
 		txnLogger.logCommit(txnState);
 		txnState.status = TxnState.TxnStatus.COMMITTED;
 		String request = pkt.getRequest();
@@ -436,7 +443,7 @@ public class TransactionNode extends RPCNode {
 		if (txnState.status == TxnState.TxnStatus.WAITING) {
 			writeOutput("(" + txnID + ") restarting termination protocol");
 			sendDecisionRequest(txnID);
-		}
+		}	
 	}
 	
 	/*
@@ -477,6 +484,14 @@ public class TransactionNode extends RPCNode {
 			} else if (txnState.status == TxnState.TxnStatus.COMMITTED) {
 				writeOutput("(" + txnState.txnID + ") responding to decision request with commit");
 				return TxnPacket.getCommitPacket(this, txnState.txnID, txnState.request, txnState.args);
+			} else if (txnState.status == TxnState.TxnStatus.DONE) {
+				if (txnState.wasCommitted) {
+					writeOutput("(" + txnState.txnID + ") responding to decision request with commit");
+					return TxnPacket.getCommitPacket(this, txnState.txnID, txnState.request, txnState.args);
+				} else {
+					writeOutput("(" + txnState.txnID + ") responding to decision request with abort");
+					return TxnPacket.getAbortPacket(this, txnState.txnID, txnState.request);
+				}
 			}
 			writeOutput("(" + txnState.txnID + ") could not respond to decision request, my status: "
 					+ txnState.status);
@@ -544,7 +559,7 @@ public class TransactionNode extends RPCNode {
     	log(output, System.err, COLOR_DUNNO);
     }
 
-    private void writeOutput(String output) {
+    protected void writeOutput(String output) {
     	log(output, System.out, COLOR_BLUE);
     }
 	
@@ -581,7 +596,7 @@ public class TransactionNode extends RPCNode {
 			}
 		}
 		
-		private void logRecord(Record r, String data) {
+		protected void logRecord(Record r, String data) {
 			try {
 				writer.append(r.msg + " " + data + "\n");
 			} catch (IOException e) {

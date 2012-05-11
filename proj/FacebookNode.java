@@ -730,6 +730,7 @@ public class FacebookNode extends TransactionNode {
 	 * If there is a current transaction already in progress, then we will reject. Otherwise, accept.
 	 */
 	public boolean proposeWallPost(UUID txnId, String args) {
+		super.writeOutput("Ongoing Transactions: " + numUnfinishedTxns());
 		return numUnfinishedTxns() == 1;
 	}
 	
@@ -754,7 +755,8 @@ public class FacebookNode extends TransactionNode {
 		List<File> oldTemps = Utility.getMatchingFiles(addr, WALL_POST_TEMP_PREFIX);
 		for (File f : oldTemps) {
 			String txnIdString = txnId.toString();
-			String fileTxnString = f.getName().substring(f.getName().indexOf("||"));
+			String fileTxnString = f.getName().substring(f.getName().indexOf("||") + 2);
+			printOutput("fileTxnString: " + fileTxnString + " vs. txnIdString: " + txnIdString);
 			if (!fileTxnString.equals(txnIdString)) {
 				// It's a temp file for a previous transaction. We can get rid of it.
 				printOutput("Deleting temp file " + f.getName());
