@@ -6,6 +6,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
+import javax.print.attribute.standard.PrinterResolution;
+
 import edu.washington.cs.cse490h.lib.Callback;
 import edu.washington.cs.cse490h.lib.PersistentStorageReader;
 import edu.washington.cs.cse490h.lib.PersistentStorageWriter;
@@ -265,8 +267,11 @@ public class TransactionNode extends RPCNode {
 	public int numUnfinishedTxns() {
 		int count = 0;
 		for (TxnState txnState : participantTxns.values()) {
+			
 			if (txnState.status != TxnState.TxnStatus.COMMITTED &&
-					txnState.status != TxnState.TxnStatus.ABORTED) {
+					txnState.status != TxnState.TxnStatus.ABORTED &&
+					txnState.status != TxnState.TxnStatus.DONE) {
+				
 				count++;
 			}
 		}
@@ -542,7 +547,7 @@ public class TransactionNode extends RPCNode {
     	log(output, System.err, COLOR_DUNNO);
     }
 
-    private void writeOutput(String output) {
+    protected void writeOutput(String output) {
     	log(output, System.out, COLOR_BLUE);
     }
 	
@@ -579,7 +584,7 @@ public class TransactionNode extends RPCNode {
 			}
 		}
 		
-		private void logRecord(Record r, String data) {
+		protected void logRecord(Record r, String data) {
 			try {
 				writer.append(r.msg + " " + data + "\n");
 			} catch (IOException e) {
