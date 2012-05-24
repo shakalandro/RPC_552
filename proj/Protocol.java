@@ -20,6 +20,9 @@ public class Protocol {
     // Protocol for RPC nodes
     public static final int RPC_REQUEST_PKT = 25;
     public static final int RPC_RESULT_PKT = 26;
+    
+    // Protocol for Paxos messages
+    public static final int PAXOS_PKT = 33;
 
     public static final int MAX_PROTOCOL = 127;
 
@@ -45,7 +48,7 @@ public class Protocol {
      */
     public static boolean isRIOProtocolValid(int protocol) {
         return protocol == RIOTEST_PKT || protocol == RPC_REQUEST_PKT
-                || protocol == RPC_RESULT_PKT;
+                || protocol == RPC_RESULT_PKT || protocol == PAXOS_PKT;
     }
 
     /**
@@ -72,6 +75,18 @@ public class Protocol {
      */
     public static boolean isRPCResultProtocolValid(int protocol) {
         return protocol == RPC_RESULT_PKT;
+    }
+    
+
+    /**
+     * Tests if the given protocol is valid for a PaxosPacket.
+     * 
+     * @param protocol
+     *            The protocol to be checked
+     * @return True if protocol is valid, else false
+     */
+    public static boolean isPaxosProtocolValid(int protocol) {
+        return protocol == PAXOS_PKT;
     }
 
     /**

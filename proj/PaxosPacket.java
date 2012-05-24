@@ -23,6 +23,9 @@ public class PaxosPacket {
 	
 	
 	public PaxosPacket(PaxosMsg type, int instance, int proposal, byte[] payload) {
+        if (payload.length > MAX_PAYLOAD_SIZE) {
+            throw new IllegalArgumentException("Invalid PaxosPacket payload");
+        }
 		this.msgType = type;
 		this.instance = instance;
 		this.proposal = proposal;

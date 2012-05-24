@@ -1,5 +1,5 @@
 
-public class PaxosNode extends FacebookNode {
+public class PaxosNode extends RPCNode {
 
     /**
      * This node has a packet to process
@@ -13,4 +13,10 @@ public class PaxosNode extends FacebookNode {
         	super.onRIOReceive(from, protocol, msg);
         }
     }
+
+	@Override
+	public void start() {
+		// TODO Auto-generated method stub
+		
+	}
 }

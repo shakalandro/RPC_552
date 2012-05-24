@@ -6,8 +6,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
-import javax.print.attribute.standard.PrinterResolution;
-
 import edu.washington.cs.cse490h.lib.Callback;
 import edu.washington.cs.cse490h.lib.PersistentStorageReader;
 import edu.washington.cs.cse490h.lib.PersistentStorageWriter;
@@ -28,7 +26,7 @@ import edu.washington.cs.cse490h.lib.Utility;
  * The commit handler will only be called once and should be atomic if you want it to
  * definitely happen.
  */
-public class TransactionNode extends RPCNode {
+public class TransactionNode extends PaxosNode {
 	
 	public static final String PROPOSAL_PREFIX = "propose";
 	public static final String COMMIT_PREFIX = "commit";
