@@ -1,0 +1,61 @@
+import java.util.*;
+
+public class PaxosState {
+	
+	//General State
+	public int instNum;
+	public int propNum;
+	public boolean decided;
+	
+	//Proposer State
+	public byte[] value;
+	public List<Integer> participants;
+	public List<Integer> promised;
+	public List<Integer> accepted;
+	public int highestAcceptedNum;
+	public byte[] highestAcceptedValue;
+	
+	//Acceptor State
+	public int promisedPropNum;
+	public int acceptedPropNum;
+	public byte[] acceptedValue;
+	
+	public PaxosState(int instNum, byte[] value) {
+		this(instNum, -1, value);
+		this.decided = true;
+	}
+	
+	public PaxosState(int instNum, int propNum, byte[] value) {
+		this(instNum, propNum, value, null);
+	}
+	
+	public PaxosState(int instNum, int propNum, byte[] value, List<Integer> participants) {
+		this.promised = new ArrayList<Integer>();
+		this.accepted = new ArrayList<Integer>();
+		this.instNum = instNum;
+		this.propNum = propNum;
+		this.value = value;
+		this.highestAcceptedNum = propNum;
+		this.highestAcceptedValue = value;
+		this.promisedPropNum = -1;
+		this.acceptedPropNum = -1;
+		this.acceptedValue = null;
+		this.participants = participants;
+	}
+	
+	public void setHighest(int n, byte[] v) {
+		if (n < this.highestAcceptedNum) {
+			throw new IllegalArgumentException("Tried to set highest prop number to something lower.");
+		}
+		this.highestAcceptedNum = n;
+		this.highestAcceptedValue = v;
+	}
+	
+	public boolean quorumPromised() {
+		return promised.size() > participants.size() / 2;
+	}
+	
+	public boolean quorumAccepted() {
+		return accepted.size() > participants.size() / 2;
+	}
+}

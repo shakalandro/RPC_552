@@ -26,7 +26,7 @@ import edu.washington.cs.cse490h.lib.Utility;
  * The commit handler will only be called once and should be atomic if you want it to
  * definitely happen.
  */
-public class TransactionNode extends PaxosNode {
+public abstract class TransactionNode extends PaxosNode {
 	
 	public static final String PROPOSAL_PREFIX = "propose";
 	public static final String COMMIT_PREFIX = "commit";

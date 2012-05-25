@@ -4,7 +4,7 @@
  * @author jennyabrahamson
  */
 public enum PaxosMsg {
-	PREPARE, PROMISE, ACCEPT, ACCEPTED;
+	PREPARE, PROMISE, ACCEPT, ACCEPTED, DECISION;
 	
     public static PaxosMsg getMessage(int ordinal) {
         return PaxosMsg.values()[ordinal];

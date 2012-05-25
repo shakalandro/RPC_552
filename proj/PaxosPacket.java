@@ -16,13 +16,38 @@ public class PaxosPacket {
     public static final int HEADER_SIZE = 9;
     public static final int MAX_PAYLOAD_SIZE = MAX_PACKET_SIZE - HEADER_SIZE;
 	
-	private final PaxosMsg msgType; // Message type of this packet (propose, promise, etc)
-	private final int instance;     // The round of Paxos
-	private final int proposal;     // The proposal num in the given instance
-	private final byte[] payload;   // May include users to post to + message
+	public final PaxosMsg msgType; // Message type of this packet (propose, promise, etc)
+	public final int instance;     // The round of Paxos
+	public final int proposal;     // The proposal num in the given instance, or the highest accepted in the case of a promise
+	public final byte[] payload;   // May include users to post to + message
 	
 	
-	public PaxosPacket(PaxosMsg type, int instance, int proposal, byte[] payload) {
+	// This factory method is best for a prepare message
+	public static PaxosPacket makePrepareMessage(int instance, int proposal, byte[] payload) {
+		return new PaxosPacket(PaxosMsg.PREPARE, instance, proposal, payload);
+	}
+	
+	// This factory method is best for a promise message
+	public static PaxosPacket makePromiseMessage(int instance, int highest, byte[] payload) {
+		return new PaxosPacket(PaxosMsg.PROMISE, instance, highest, payload);
+	}
+	
+	// This factory method is best for an accept message
+	public static PaxosPacket makeAcceptMessage(int instance, int proposal, byte[] payload) {
+		return new PaxosPacket(PaxosMsg.ACCEPT, instance, proposal, payload);
+	}
+	
+	// This factory method is best for an accepted message
+	public static PaxosPacket makeAcceptedMessage(int instance, int proposal, byte[] payload) {
+		return new PaxosPacket(PaxosMsg.ACCEPTED, instance, proposal, payload);
+	}
+	
+	// This factory method is best for an accepted message
+	public static PaxosPacket makeDecisionMessage(int instance, int proposal, byte[] payload) {
+		return new PaxosPacket(PaxosMsg.DECISION, instance, proposal, payload);
+	}
+	
+	private PaxosPacket(PaxosMsg type, int instance, int proposal, byte[] payload) {
         if (payload.length > MAX_PAYLOAD_SIZE) {
             throw new IllegalArgumentException("Invalid PaxosPacket payload");
         }
