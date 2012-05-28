@@ -1,6 +1,10 @@
 import java.util.*;
 
+import edu.washington.cs.cse490h.lib.Utility;
+
 public class PaxosState {
+
+    public static final String LOG_SEPERATOR = ",";
 	
 	//General State
 	public int instNum;
@@ -57,5 +61,14 @@ public class PaxosState {
 	
 	public boolean quorumAccepted() {
 		return accepted.size() > participants.size() / 2;
+	}
+	
+	public String toLogString() {
+		return this.instNum + LOG_SEPERATOR + Utility.byteArrayToString(this.value);
+	}
+	
+	public static PaxosState fromLogString(String s) {
+		String[] parts = s.split(LOG_SEPERATOR, 2);
+		return new PaxosState(Integer.parseInt(parts[0]), Utility.stringToByteArray(parts[1]));
 	}
 }

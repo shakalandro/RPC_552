@@ -93,6 +93,10 @@ public class FacebookNode extends TransactionNode {
 		}
 	}
 	
+	public void handlePaxosCommand(int instNum, byte[] value) {
+		// TODO: implement
+	}
+	
 	// Fetches meta-data about the locations of each user's data (which server is the data located on.)
 	public void getDataLocations(Integer errorCode) {
 		// Do a get on the .users file.
