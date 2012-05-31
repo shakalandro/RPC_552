@@ -24,7 +24,6 @@ import edu.washington.cs.cse490h.lib.Utility;
  * 
  * @author: Greg Bigelow
  */
-
 public class FacebookNode extends PaxosNode {
 
 	private static final String COLOR_CYAN = "0;36";

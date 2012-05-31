@@ -29,7 +29,7 @@ public abstract class PaxosNode extends RPCNode {
 	
 	private int highestExecutedNum = -1;
 	
-	protected final static Integer[] REPLICA_ADDRS = {1, 2, 4, 6};
+	protected final static Integer[] REPLICA_ADDRS = {0, 1, 2, 4};
 	
 	/**
 	 * Clients wishing to replicate some command must call this function. In time either the
@@ -341,6 +341,11 @@ public abstract class PaxosNode extends RPCNode {
 		}
 		// Recover the decided commands from the log file.
 		try {
+			if (!Utility.fileExists(this, PAXOS_LOG_FILE)) {
+				noteOutput("Log file doesn't yet exist.");
+				return;
+			}
+			
 			PersistentStorageReader in = this.getReader(PAXOS_LOG_FILE);
 			if (!in.ready()) {
 				noteError("Recover decisions from log file");
@@ -387,6 +392,7 @@ public abstract class PaxosNode extends RPCNode {
 			}
 		} catch (Exception e) {
 			noteError("Crashed trying to recover commands from log file");
+			System.out.println(e.toString());
 			fail();
 		}
 	}
