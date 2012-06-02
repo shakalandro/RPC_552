@@ -70,11 +70,6 @@ public abstract class PaxosNode extends RPCNode {
 	private void proposeCommand(List<Integer> addrs, Integer instNum, byte[] payload) {
 		proposeCommand(addrs, instNum, payload, STARTING_BACKOFF);
 	}
-	
-	public void proposeCommand(Integer instNum) {
-		System.out.println("here");
-		System.exit(1);
-	}
 
 	public void proposeCommand(List<Integer> addrs, Integer instNum, byte[] payload, Integer backoff) {
 		if (!this.rounds.get(instNum).decided) {
