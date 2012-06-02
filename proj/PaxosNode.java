@@ -1,10 +1,14 @@
 import java.io.IOException;
 import java.lang.reflect.Method;
-import java.util.*;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.Random;
+import java.util.Set;
+import java.util.TreeMap;
 
 import edu.washington.cs.cse490h.lib.Callback;
-import edu.washington.cs.cse490h.lib.MessageLayer;
-import edu.washington.cs.cse490h.lib.Packet;
 import edu.washington.cs.cse490h.lib.PersistentStorageReader;
 import edu.washington.cs.cse490h.lib.PersistentStorageWriter;
 import edu.washington.cs.cse490h.lib.Utility;
@@ -63,11 +67,16 @@ public abstract class PaxosNode extends RPCNode {
 		return (2 * this.addr * ((last / this.addr) + 1));
 	}
 
-	private void proposeCommand(List<Integer> addrs, int instNum, byte[] payload) {
+	private void proposeCommand(List<Integer> addrs, Integer instNum, byte[] payload) {
 		proposeCommand(addrs, instNum, payload, STARTING_BACKOFF);
 	}
+	
+	public void proposeCommand(Integer instNum) {
+		System.out.println("here");
+		System.exit(1);
+	}
 
-	private void proposeCommand(List<Integer> addrs, int instNum, byte[] payload, int backoff) {
+	public void proposeCommand(List<Integer> addrs, Integer instNum, byte[] payload, Integer backoff) {
 		if (!this.rounds.get(instNum).decided) {
 			int propNum = this.rounds.get(instNum).propNum;
 			for (Integer nodeAddr : addrs) {
@@ -82,7 +91,7 @@ public abstract class PaxosNode extends RPCNode {
 				Method m =
 						Callback.getMethod("proposeCommand", this,
 								new String[] { List.class.getName(), Integer.class.getName(),
-										byte[].class.getName(), Integer.class.getName() });
+										byte[].class.getName(), Integer.class.getName(), });
 				Callback retry =
 						new Callback(m, this, new Object[] { addrs, instNum, payload,
 								backoff * 2 + r.nextInt() % RANDOM_BACKOFF_MAX });
