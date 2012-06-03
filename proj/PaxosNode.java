@@ -81,8 +81,8 @@ public abstract class PaxosNode extends RPCNode {
 			try {
 				Method m =
 						Callback.getMethod("proposeCommand", this,
-								new String[] { List.class.getName(), Integer.class.getName(),
-										byte[].class.getName(), Integer.class.getName() });
+								new String[] { List.class.getName(), int.class.getName(),
+										byte[].class.getName(), int.class.getName() });
 				Callback retry =
 						new Callback(m, this, new Object[] { addrs, instNum, payload,
 								backoff * 2 + r.nextInt() % RANDOM_BACKOFF_MAX });
