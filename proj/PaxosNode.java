@@ -51,6 +51,7 @@ public abstract class PaxosNode extends RPCNode {
 		if (addrs.size() > MAX_NODES) {
 			throw new IllegalArgumentException("This algorithm breaks if you have more than " + MAX_NODES + " replicas.");
 		}
+		noteOutput("About to attempt to replicate! Payload: " + Utility.byteArrayToString(payload));
 		int instNum = getInstNum();
 		rounds.put(instNum, new PaxosState(instNum, getNextPropNum(0), payload, addrs));
 		proposeCommand(addrs, instNum, payload);
@@ -103,6 +104,9 @@ public abstract class PaxosNode extends RPCNode {
 			} catch (Exception e) {
 				noteError("(" + instNum + ") Failed to make callback for proposal retry.");
 				e.printStackTrace();
+				noteError("***************************");
+				noteError("FAILING");
+				noteError("***************************");
 				fail();
 			}
 		} else if (!Arrays.equals(state.value, state.decidedValue)) {
@@ -267,17 +271,23 @@ public abstract class PaxosNode extends RPCNode {
 	// logs all of the known commands to persistent storage with the put recovery method
 	private void logKnownCommands() {
 		try {
-			// Get old file contents into string
-			PersistentStorageReader reader = getReader(PAXOS_LOG_FILE);
-			char[] buf = new char[MAX_FILE_SIZE];
-			reader.read(buf, 0, MAX_FILE_SIZE);
-			String oldFileData = new String(buf);
+			if (Utility.fileExists(this, PAXOS_LOG_FILE)) {
 
-			// Put old file contents into temp file
-			PersistentStorageWriter writer = this.getWriter(TEMP_PAXOS_LOG_FILE, false);
-			writer.write(oldFileData);
-			writer.close();
+				// Get old file contents into string
+				PersistentStorageReader reader = getReader(PAXOS_LOG_FILE);
 
+				char[] buf = new char[MAX_FILE_SIZE];
+				reader.read(buf, 0, MAX_FILE_SIZE);
+
+				String oldFileData = new String(buf);
+
+				// Put old file contents into temp file
+				PersistentStorageWriter writer = this.getWriter(TEMP_PAXOS_LOG_FILE, false);
+				writer.write(oldFileData);
+				writer.close();
+
+			}
+			
 			// Write commands data to log file
 			PersistentStorageWriter logFile = this.getWriter(PAXOS_LOG_FILE, false);
 			String logData = "";
@@ -289,10 +299,14 @@ public abstract class PaxosNode extends RPCNode {
 			logFile.close();
 
 			// Delete temp file
-			writer = this.getWriter(TEMP_PAXOS_LOG_FILE, false);
+			PersistentStorageWriter writer = this.getWriter(TEMP_PAXOS_LOG_FILE, false);
 			writer.delete();
 			writer.close();
+			
 		} catch (Exception e) {
+			noteError("***************************");
+			noteError("FAILING! (logging known commands)");
+			noteError("***************************");
 			fail();
 		}
 	}
@@ -369,6 +383,9 @@ public abstract class PaxosNode extends RPCNode {
 			} catch (IOException e) {
 				// Fail ourselves and try again
 				noteError("Crashed trying to recover old log file");
+				noteError("***************************");
+				noteError("FAILING!");
+				noteError("***************************");
 				fail();
 			}
 		}
@@ -425,6 +442,9 @@ public abstract class PaxosNode extends RPCNode {
 		} catch (Exception e) {
 			noteError("Crashed trying to recover commands from log file");
 			System.out.println(e.toString());
+			noteError("***************************");
+			noteError("FAILING");
+			noteError("***************************");
 			fail();
 		}
 	}

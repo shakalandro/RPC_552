@@ -89,6 +89,12 @@ public class FacebookNode extends PaxosNode {
 
 	// Do the wall posting with the given information.
 	public void handlePaxosCommand(int instNum, byte[] value) {
+		
+		if (addr == CLIENT_ID) {
+			// We've learned the command! No need to execute
+			return;
+		}
+		
 		String args = Utility.byteArrayToString(value);
 		Object[] objArgs = parseArgs(args);
 
@@ -1208,6 +1214,9 @@ public class FacebookNode extends PaxosNode {
 			printError("Could not instantiate callback " + methodName + "("
 					+ Arrays.toString(parameterTypes) + ")");
 			e.printStackTrace();
+			printError("***************************");
+			printError("FAILING!");
+			printError("***************************");
 			fail();
 			return null;
 		}

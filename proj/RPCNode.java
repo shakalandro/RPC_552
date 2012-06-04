@@ -29,7 +29,7 @@ public class RPCNode extends RIONode {
 //	 public static double getDelayRate() { return MessageLayer.rpcDelay / 100.0; }
 
 	public static double getFailureRate() {
-		return 0 / 100.0;
+		return 0.0 / 100.0;
 	}
 
 	public static double getRecoveryRate() {
@@ -115,6 +115,9 @@ public class RPCNode extends RIONode {
 			} catch (IOException e) {
 				// fail ourselves and try again
 				logError("Could not recover log file for put, failing now.");
+				logError("***************************");
+				logError("FAILING!");
+				logError("***************************");
 				fail();
 			}
 		}
