@@ -28,11 +28,15 @@ public abstract class PaxosNode extends RPCNode {
 	private static final String COLOR_ERROR = "0;31";
 	private static final Random r = new Random();
 	private static final int MAX_NODES = 1000;
+	
+	private static final byte[] noopMarker = new byte[] {'\0'};
 
 	// State data shared by all roles.
 	private Map<Integer, PaxosState> rounds;
 	
 	private int highestExecutedNum = -1;
+	
+	protected final static Integer[] REPLICA_ADDRS = {0, 1, 2, 4};
 	
 	/**
 	 * Clients wishing to replicate some command must call this function. In time either the
@@ -83,7 +87,7 @@ public abstract class PaxosNode extends RPCNode {
 				PaxosPacket prepare = PaxosPacket.makePrepareMessage(instNum, propNum, payload);
 				
 				noteOutput("Prepare (" + instNum + "," + propNum + ") sent to " + nodeAddr
-							+ " with value: " + (payload != null ? Utility.byteArrayToString(payload) : "no-op"));
+							+ " with value: " + (payload != noopMarker ? Utility.byteArrayToString(payload) : "no-op"));
 				
 				RIOSend(nodeAddr, Protocol.PAXOS_PKT, prepare.pack());
 			}
@@ -228,7 +232,7 @@ public abstract class PaxosNode extends RPCNode {
 		// If we detected a gap, go ahead and propose no-ops for those missing slots.
 		if (instNum == highestExecutedNum + 1) {
 			noteOutput("(" + instNum + ") Executing command");
-			if (state.decidedValue != null) {
+			if (state.decidedValue != noopMarker) {
 				handlePaxosCommand(state.instNum, state.decidedValue);
 			} else {
 				noteOutput("(" + instNum + ") No-op command completed");
@@ -245,7 +249,7 @@ public abstract class PaxosNode extends RPCNode {
 			noteOutput("(" + instNum + ") We have detected a gap");
 			int gapLength = instNum - this.highestExecutedNum - 1;
 			for (int i = 0; i < gapLength; i++) {
-				learnCommand(state.participants, highestExecutedNum + i);
+				learnCommand(Arrays.asList(REPLICA_ADDRS), highestExecutedNum + 1 + i);
 			}
 		}
 		
@@ -256,7 +260,8 @@ public abstract class PaxosNode extends RPCNode {
 	// Use this to propose a no-op in order to either put a no-op in place or ferret out the actual 
 	// value selected for a round.
 	private void learnCommand(List<Integer> addrs, int instNum) {
-		proposeCommand(addrs, instNum, null);
+		this.rounds.put(instNum, new PaxosState(instNum, getNextPropNum(0), noopMarker, addrs));
+		proposeCommand(addrs, instNum, noopMarker);
 	}
 
 	// logs all of the known commands to persistent storage with the put recovery method

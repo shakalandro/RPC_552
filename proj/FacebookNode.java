@@ -76,8 +76,6 @@ public class FacebookNode extends PaxosNode {
 	public String loggedInUser = null;
 
 	public boolean doingWork = false;
-	
-	protected final static Integer[] REPLICA_ADDRS = {0, 1, 2, 4};
 
 	@Override
 	public void start() {
