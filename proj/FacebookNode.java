@@ -56,7 +56,7 @@ public class FacebookNode extends PaxosNode {
 
 	// The id of the node from which commands will be sent.
 	public static final int CLIENT_ID = 1;
-
+	
 	// The number of servers we'll have on the system. By convention, they have even numbered id's
 	// starting at 0. Also by convention, the .users file is stored on server 0.
 	private static final int NUM_SERVERS = 3;
@@ -79,6 +79,7 @@ public class FacebookNode extends PaxosNode {
 	
 	protected final static Integer[] REPLICA_ADDRS = {0, 1, 2, 4};
 
+	
 	@Override
 	public void start() {
 		super.start();
@@ -86,6 +87,17 @@ public class FacebookNode extends PaxosNode {
 		// If I'm the client, I need to figure out where each user's data is stored.
 		if (addr == CLIENT_ID) {
 			getDataLocations(null);
+		}
+		
+		pingServers();
+	}
+	
+	// Contacts the servers to keep in touch.
+	public void pingServers() {
+		for (Integer replicaNum : REPLICA_ADDRS) {
+			if (replicaNum != this.addr) {
+				this.RIOSend(replicaNum, Protocol.TEST, null);
+			}
 		}
 	}
 

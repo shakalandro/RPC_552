@@ -23,6 +23,7 @@ public class Protocol {
     
     // Protocol for Paxos messages
     public static final int PAXOS_PKT = 33;
+    public static final int TEST = 42;
 
     public static final int MAX_PROTOCOL = 127;
 
@@ -48,7 +49,8 @@ public class Protocol {
      */
     public static boolean isRIOProtocolValid(int protocol) {
         return protocol == RIOTEST_PKT || protocol == RPC_REQUEST_PKT
-                || protocol == RPC_RESULT_PKT || protocol == PAXOS_PKT;
+                || protocol == RPC_RESULT_PKT || protocol == PAXOS_PKT
+                || protocol == TEST;
     }
 
     /**
