@@ -67,10 +67,10 @@ public class ReliableInOrderMsgLayer {
 		}
 	}
 	
-	// Clears the communication slate with given node. This involves resetting the sequence numbers and trashing
-	// all un-acked packets and out-of-order packets associated with this node.
+	// Clears the communication slate with given node. This involves resetting the sequence numbers. Un-acked packets
+	// are kept around so that we keep on sending them.
 	private void clearCommunicationState(int nodeAddr) {
-		InChannel in = new InChannel();
+		InChannel in = new InChannel();	
 		OutChannel out = new OutChannel(this, nodeAddr);
 		inConnections.put(nodeAddr, in);
 		outConnections.put(nodeAddr, out);
