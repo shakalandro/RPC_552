@@ -33,7 +33,6 @@ public abstract class PaxosNode extends RPCNode {
 	
 	private int highestExecutedNum = -1;
 	
-	
 	/**
 	 * Clients wishing to replicate some command must call this function. In time either the
 	 * handlePaxosCommand() or retryPaxosCommand() methods will be called. The former is in response
