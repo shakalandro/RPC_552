@@ -95,15 +95,17 @@ public abstract class PaxosNode extends RPCNode {
 				e.printStackTrace();
 				fail();
 			}
-		} else {
-			noteOutput("(" + instNum + ") Paxos round already decided, no need to propose");
+		} else if (!Arrays.equals(state.value, state.decidedValue)) {
+			noteOutput("(" + instNum + ") Paxos round already decided, but it wasn't my value, retrying");
 			retryPaxosCommand(state.participants, state.instNum, state.value);
+		} else {
+			noteOutput("(" + instNum + ") Paxos round already decided, and I won, no need to try again");
 		}
 	}
 	
 	// Override this in order to implement custom retry behavior
 	public void retryPaxosCommand(List<Integer> addrs, Integer instNum, byte[] payload) {
-		proposeCommand(addrs, instNum, payload);
+		replicateCommand(addrs, payload);
 	}
 
 	private void handlePromiseResponse(int from, int instNum, int highestAccept, byte[] payload) {
@@ -213,15 +215,15 @@ public abstract class PaxosNode extends RPCNode {
 			this.rounds.put(instNum, state);
 		}
 		
-		state.value = payload;
+		state.decidedValue = payload;
 		state.decided = true;
 		
 		// If the command is next in line to be executed, then execute it. Otherwise, we have detected a gap.
 		// If we detected a gap, go ahead and propose no-ops for those missing slots.
 		if (instNum == highestExecutedNum + 1) {
 			noteOutput("(" + instNum + ") Executing command");
-			if (state.value != null) {
-				handlePaxosCommand(state.instNum, state.value);
+			if (state.decidedValue != null) {
+				handlePaxosCommand(state.instNum, state.decidedValue);
 			} else {
 				noteOutput("(" + instNum + ") No-op command completed");
 			}
@@ -237,8 +239,7 @@ public abstract class PaxosNode extends RPCNode {
 			noteOutput("(" + instNum + ") We have detected a gap");
 			int gapLength = instNum - this.highestExecutedNum - 1;
 			for (int i = 0; i < gapLength; i++) {
-				List<Integer> addrs = Arrays.asList(REPLICA_ADDRS);
-				learnCommand(addrs, highestExecutedNum + i);
+				learnCommand(state.participants, highestExecutedNum + i);
 			}
 		}
 		

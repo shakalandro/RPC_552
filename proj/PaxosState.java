@@ -30,6 +30,9 @@ public class PaxosState {
 	public int highestExecutedInstNum;
 	public byte[] acceptedValue;
 	
+	//Learner State
+	public byte[] decidedValue;
+	
 	public PaxosState(int instNum, byte[] value, boolean executed) {
 		this(instNum, -1, value);
 		this.decided = true;
