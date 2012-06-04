@@ -66,13 +66,15 @@ public abstract class PaxosNode extends RPCNode {
 	}
 
 	private void proposeCommand(List<Integer> addrs, Integer instNum, byte[] payload) {
-		proposeCommand(addrs, instNum, payload, STARTING_BACKOFF);
+		PaxosState state = this.rounds.get(instNum);
+		proposeCommand(addrs, instNum, state.propNum, payload, STARTING_BACKOFF);
 	}
 
-	public void proposeCommand(List<Integer> addrs, Integer instNum, byte[] payload, Integer backoff) {
+	public void proposeCommand(List<Integer> addrs, Integer instNum, Integer propNum,
+			byte[] payload, Integer backoff) {
 		PaxosState state = this.rounds.get(instNum);
 		if (!state.decided) {
-			int propNum = this.rounds.get(instNum).propNum;
+			state.propNum = propNum;
 			for (Integer nodeAddr : addrs) {
 				PaxosPacket prepare = PaxosPacket.makePrepareMessage(instNum, propNum, payload);
 				
@@ -84,8 +86,10 @@ public abstract class PaxosNode extends RPCNode {
 			try {
 				Method m = Callback.getMethod("proposeCommand", this,
 						new String[] { List.class.getName(), Integer.class.getName(),
-						byte[].class.getName(), Integer.class.getName(), });
-				Callback retry = new Callback(m, this, new Object[] { addrs, instNum, payload,
+						Integer.class.getName(), byte[].class.getName(), Integer.class.getName()
+						});
+				Callback retry = new Callback(m, this, new Object[] { addrs, instNum,
+						getNextPropNum(propNum), payload,
 						backoff * 2 + r.nextInt() % RANDOM_BACKOFF_MAX });
 				addTimeout(retry, backoff);
 			} catch (Exception e) {
