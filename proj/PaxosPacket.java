@@ -48,7 +48,7 @@ public class PaxosPacket {
 	}
 	
 	private PaxosPacket(PaxosMsg type, int instance, int proposal, byte[] payload) {
-        if (payload.length > MAX_PAYLOAD_SIZE) {
+        if (payload != null && payload.length > MAX_PAYLOAD_SIZE) {
             throw new IllegalArgumentException("Invalid PaxosPacket payload");
         }
 		this.msgType = type;
@@ -74,7 +74,10 @@ public class PaxosPacket {
 			out.writeByte(msgType.ordinal());
             out.writeInt(instance);
             out.writeInt(proposal);
-			out.write(payload, 0, payload.length);
+            
+            if (payload != null) {
+            	out.write(payload, 0, payload.length);
+            }
 
 			out.flush();
 			out.close();
@@ -93,23 +96,23 @@ public class PaxosPacket {
 	public static PaxosPacket unpack(byte[] packet) {
 		try {
 			DataInputStream in = new DataInputStream(new ByteArrayInputStream(packet));
-
 			int type = in.readByte();
 			int instance = in.readInt();
 			int proposal = in.readInt();
 
 			byte[] payload = new byte[packet.length - HEADER_SIZE];
 			int bytesRead = in.read(payload, 0, payload.length);
-
-			if (bytesRead != payload.length) {
-				return null;
+			
+			if (payload.length == 0) {
+				payload = null;
 			}
-
 			return new PaxosPacket(PaxosMsg.getMessage(type), instance, proposal, payload);
 		} catch (IllegalArgumentException e) {
-			// will return null
+			System.out.println("Problem: " + e.getMessage());
+			e.printStackTrace();
 		} catch(IOException e) {
-			// will return null
+			System.out.println("Problem: " + e.getMessage());
+			e.printStackTrace();
 		}
 		return null;
 	}

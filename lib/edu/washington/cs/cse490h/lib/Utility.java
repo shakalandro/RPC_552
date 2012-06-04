@@ -45,6 +45,7 @@ public class Utility {
      */
     public static String byteArrayToString(byte[] msg) {
         try {
+        	if (msg == null) return null; 
             return new String(msg, CHARSET);
         } catch (UnsupportedEncodingException e) {
             System.err

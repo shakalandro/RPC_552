@@ -33,15 +33,15 @@ public class RPCNode extends RIONode {
 	}
 
 	public static double getRecoveryRate() {
-		return 60.0 / 100.0;
+		return 0.0 / 100.0;
 	}
 
 	public static double getDropRate() {
-		return 20.0 / 100.0;
+		return 0.0 / 100.0;
 	}
 
 	public static double getDelayRate() {
-		return 30.0 / 100.0;
+		return 0.0 / 100.0;
 	}
 
 	/** Colors for console logging */
