@@ -26,7 +26,6 @@ import edu.washington.cs.cse490h.lib.Utility;
  */
 public class FacebookNode extends PaxosNode {
 
-	private static final String COLOR_CYAN = "0;36";
 	private static final String COLOR_PURPLE = "1;35";
 	private static final String COLOR_RED = "0;31";
 
@@ -51,10 +50,8 @@ public class FacebookNode extends PaxosNode {
 	private static final String WALL_POST_TEMP_PREFIX = ".wall_temp_";
 
 	// Error codes for file RPC methods.
-	private static final Integer CRASH = 1;
 	private static final Integer FILE_NO_EXIST = 10;
 	private static final Integer FILE_EXISTS = 11;
-	private static final Integer TIMEOUT = 20;
 	private static final Integer FILE_TOO_LARGE = 30;
 
 	// The id of the node from which commands will be sent.
@@ -161,8 +158,7 @@ public class FacebookNode extends PaxosNode {
 
 					// Write message contents to the temp file.
 					// Then write the message contents to the master file. If we go down in-between,
-					// we can
-					// still recover nicely!
+					// we can still recover nicely!
 					PersistentStorageWriter tempWriter = this.getWriter(tempFileName, false);
 					tempWriter.write(contents);
 					PersistentStorageWriter masterWriter =
@@ -175,9 +171,7 @@ public class FacebookNode extends PaxosNode {
 		}
 
 		// If I'm the client, then print a success message.
-		if (addr == CLIENT_ID) {
-			printOutput("Writing to walls in progress!");
-		}
+		printOutput("I'm a good replica and wrote to the walls of your friends!");
 	}
 
 	// Fetches meta-data about the locations of each user's data (which server is the data located
