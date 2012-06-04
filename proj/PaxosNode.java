@@ -1,10 +1,14 @@
 import java.io.IOException;
 import java.lang.reflect.Method;
-import java.util.*;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.Random;
+import java.util.Set;
+import java.util.TreeMap;
 
 import edu.washington.cs.cse490h.lib.Callback;
-import edu.washington.cs.cse490h.lib.MessageLayer;
-import edu.washington.cs.cse490h.lib.Packet;
 import edu.washington.cs.cse490h.lib.PersistentStorageReader;
 import edu.washington.cs.cse490h.lib.PersistentStorageWriter;
 import edu.washington.cs.cse490h.lib.Utility;
@@ -20,8 +24,8 @@ public abstract class PaxosNode extends RPCNode {
 	private static final int RANDOM_BACKOFF_MAX = 20;
 	private static final String PAXOS_LOG_FILE = ".paxos";
 	private static final String TEMP_PAXOS_LOG_FILE = PAXOS_LOG_FILE + "_temp";
-	private static final String COLOR_OUTPUT = "0;3";
-	private static final String COLOR_ERROR = "0;4";
+	private static final String COLOR_OUTPUT = "0;34";
+	private static final String COLOR_ERROR = "0;31";
 	private static final Random r = new Random();
 
 	// State data shared by all roles.
@@ -63,11 +67,11 @@ public abstract class PaxosNode extends RPCNode {
 		return (2 * this.addr * ((last / this.addr) + 1));
 	}
 
-	private void proposeCommand(List<Integer> addrs, int instNum, byte[] payload) {
+	private void proposeCommand(List<Integer> addrs, Integer instNum, byte[] payload) {
 		proposeCommand(addrs, instNum, payload, STARTING_BACKOFF);
 	}
 
-	private void proposeCommand(List<Integer> addrs, int instNum, byte[] payload, int backoff) {
+	public void proposeCommand(List<Integer> addrs, Integer instNum, byte[] payload, Integer backoff) {
 		if (!this.rounds.get(instNum).decided) {
 			int propNum = this.rounds.get(instNum).propNum;
 			for (Integer nodeAddr : addrs) {
@@ -79,13 +83,11 @@ public abstract class PaxosNode extends RPCNode {
 				RIOSend(nodeAddr, Protocol.PAXOS_PKT, prepare.pack());
 			}
 			try {
-				Method m =
-						Callback.getMethod("proposeCommand", this,
-								new String[] { List.class.getName(), Integer.class.getName(),
-										byte[].class.getName(), Integer.class.getName() });
-				Callback retry =
-						new Callback(m, this, new Object[] { addrs, instNum, payload,
-								backoff * 2 + r.nextInt() % RANDOM_BACKOFF_MAX });
+				Method m = Callback.getMethod("proposeCommand", this,
+						new String[] { List.class.getName(), Integer.class.getName(),
+						byte[].class.getName(), Integer.class.getName(), });
+				Callback retry = new Callback(m, this, new Object[] { addrs, instNum, payload,
+						backoff * 2 + r.nextInt() % RANDOM_BACKOFF_MAX });
 				addTimeout(retry, backoff);
 			} catch (Exception e) {
 				noteError("(" + instNum + ") Failed to make callback for proposal retry.");
@@ -100,27 +102,33 @@ public abstract class PaxosNode extends RPCNode {
 	private void handlePromiseResponse(int from, int instNum, int highestAccept, byte[] payload) {
 		PaxosState state = this.rounds.get(instNum);
 		state.promised.add(from);
+		noteOutput("(" + instNum + ") recieved promise from " + from + " with highestAccepted = " + highestAccept);
 		if (highestAccept > state.highestAcceptedNum) {
 			noteOutput("(" + instNum + ") promise came with a higher acceptance value");
 			state.setHighest(highestAccept, payload);
 		}
-		if (state.quorumPromised()) {
+		if (state.quorumPromised() && !state.acceptRequestsSent) {
 			noteOutput("(" + instNum + ") quorum promised");
 			for (Integer nodeAddr : state.promised) {
 				PaxosPacket accept =
 						PaxosPacket.makeAcceptMessage(instNum, state.propNum,
 								state.highestAcceptedValue);
 				noteOutput("Accept request (" + instNum + "," + state.propNum + ") sent to "
-						+ nodeAddr + " with value: " + Utility.byteArrayToString(payload));
+						+ nodeAddr + " with value: " + Utility.byteArrayToString(state.highestAcceptedValue));
 				RIOSend(nodeAddr, Protocol.PAXOS_PKT, accept.pack());
 			}
+			state.acceptRequestsSent = true;
+		} else if (state.quorumPromised()) {
+			noteOutput("(" + instNum + ") quorum promised, but accept requests already sent");
+		} else {
+			noteOutput("(" + instNum + ") " + state.numPromised() + " out of " + state.participants.size() + " promised");
 		}
 	}
 
 	private void handleAcceptResponse(int from, int instNum, int n, byte[] payload) {
 		PaxosState state = this.rounds.get(instNum);
 		state.accepted.add(from);
-		if (state.quorumAccepted()) {
+		if (state.quorumAccepted() && !state.decisionsSent) {
 			noteOutput("(" + instNum + ") quorum accepted value: "
 					+ Utility.byteArrayToString(payload));
 			for (Integer nodeAddr : state.participants) {
@@ -128,6 +136,11 @@ public abstract class PaxosNode extends RPCNode {
 				noteOutput("(" + instNum + ") sending decision to " + nodeAddr);
 				RIOSend(nodeAddr, Protocol.PAXOS_PKT, decision.pack());
 			}
+			state.decisionsSent = true;
+		} else if (state.quorumAccepted()) {
+			noteOutput("(" + instNum + ") quorum accepted, but decisions already sent");
+		} else {
+			noteOutput("(" + instNum + ") " + state.numAccepted() + " out of " + state.participants.size() + " accepted");
 		}
 	}
 
@@ -148,7 +161,8 @@ public abstract class PaxosNode extends RPCNode {
 					PaxosPacket.makePromiseMessage(state.instNum, state.acceptedPropNum,
 							state.acceptedValue);
 			noteOutput("(" + instNum + ") promise not to accept lower than " + n);
-			RIOSend(from, Protocol.PAXOS_PKT, promise.pack());
+			byte[] packed = promise.pack();
+			RIOSend(from, Protocol.PAXOS_PKT, packed);
 		} else {
 			noteOutput("(" + instNum + ") ignoring prepare request, I already promised higher");
 		}
@@ -163,7 +177,7 @@ public abstract class PaxosNode extends RPCNode {
 			state.acceptedPropNum = n;
 			state.acceptedValue = payload;
 			PaxosPacket accepted = PaxosPacket.makeAcceptedMessage(instNum, n, payload);
-			noteOutput("(" + instNum + ") Accepted");
+			noteOutput("(" + instNum + ") Accepted prop " + n + " with payload " + Utility.byteArrayToString(payload));
 			RIOSend(from, Protocol.PAXOS_PKT, accepted.pack());
 		} else {
 			noteOutput("(" + instNum + ") I promised not to accept lower than "

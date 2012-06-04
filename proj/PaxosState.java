@@ -21,6 +21,8 @@ public class PaxosState {
 	public List<Integer> accepted;
 	public int highestAcceptedNum;
 	public byte[] highestAcceptedValue;
+	public boolean decisionsSent;
+	public boolean acceptRequestsSent;
 	
 	//Acceptor State
 	public int promisedPropNum;
@@ -65,12 +67,26 @@ public class PaxosState {
 		return promised.size() > participants.size() / 2;
 	}
 	
+	public int numPromised() {
+		return promised.size();
+	}
+	
 	public boolean quorumAccepted() {
 		return accepted.size() > participants.size() / 2;
 	}
 	
+	public int numAccepted() {
+		return accepted.size();
+	}
+	
 	public String toLogString() {
 		return this.instNum + LOG_SEPERATOR + Utility.byteArrayToString(this.value) + LOG_SEPERATOR + (this.decided ? EXECUTED_TRUE_STRING : EXECUTED_FALSE_STRING);
+	}
+	
+	// for debugging
+	public String toString() {
+		return "(" + this.instNum + ") prop:" + this.propNum + ", promise:" + this.promisedPropNum +
+				", accepted:" + this.acceptedPropNum + ", payload:" + Utility.byteArrayToString(this.value); 
 	}
 	
 	public static PaxosState fromLogString(String s) {
