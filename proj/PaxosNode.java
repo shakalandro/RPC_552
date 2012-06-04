@@ -43,6 +43,7 @@ public abstract class PaxosNode extends RPCNode {
 	 * @param payload The command to replicate.
 	 */
 	public void replicateCommand(List<Integer> addrs, byte[] payload) {
+		noteOutput("About to attempt to replicate! Payload: " + Utility.byteArrayToString(payload));
 		int instNum = getInstNum();
 		rounds.put(instNum, new PaxosState(instNum, getNextPropNum(0), payload, addrs));
 		proposeCommand(addrs, instNum, payload);
