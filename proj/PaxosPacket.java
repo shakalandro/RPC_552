@@ -102,7 +102,7 @@ public class PaxosPacket {
 
 			byte[] payload = new byte[packet.length - HEADER_SIZE];
 			int bytesRead = in.read(payload, 0, payload.length);
-			
+			System.out.println("read: " + bytesRead);
 			if (bytesRead != payload.length) {
 				return null;
 			}

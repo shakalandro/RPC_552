@@ -29,7 +29,7 @@ public abstract class PaxosNode extends RPCNode {
 	private static final Random r = new Random();
 	private static final int MAX_NODES = 1000;
 	
-	private static final byte[] noopMarker = new byte[] {'\0'};
+	private static final byte[] noopMarker = new byte[] {'.'};
 
 	// State data shared by all roles.
 	private Map<Integer, PaxosState> rounds;
@@ -88,7 +88,7 @@ public abstract class PaxosNode extends RPCNode {
 				PaxosPacket prepare = PaxosPacket.makePrepareMessage(instNum, propNum, payload);
 				
 				noteOutput("Prepare (" + instNum + "," + propNum + ") sent to " + nodeAddr
-							+ " with value: " + (payload != noopMarker ? Utility.byteArrayToString(payload) : "no-op"));
+							+ " with value: " + (!Arrays.equals(payload, noopMarker) ? Utility.byteArrayToString(payload) : "no-op"));
 				
 				RIOSend(nodeAddr, Protocol.PAXOS_PKT, prepare.pack());
 			}
@@ -151,7 +151,7 @@ public abstract class PaxosNode extends RPCNode {
 	private void handleAcceptResponse(int from, int instNum, int n, byte[] payload) {
 		PaxosState state = this.rounds.get(instNum);
 		state.accepted.add(from);
-		if (state.quorumAccepted() && !state.decisionsSent) {
+		if (!Arrays.equals(payload, noopMarker) && state.quorumAccepted() && !state.decisionsSent) {
 			noteOutput("(" + instNum + ") quorum accepted value: "
 					+ Utility.byteArrayToString(payload));
 			for (Integer nodeAddr : state.participants) {
@@ -182,7 +182,7 @@ public abstract class PaxosNode extends RPCNode {
 			state.promisedPropNum = n;
 			PaxosPacket promise =
 					PaxosPacket.makePromiseMessage(state.instNum, state.acceptedPropNum,
-							state.acceptedValue);
+							(state.acceptedValue == null) ? payload : state.acceptedValue);
 			noteOutput("(" + instNum + ") promise not to accept lower than " + n);
 			byte[] packed = promise.pack();
 			RIOSend(from, Protocol.PAXOS_PKT, packed);
@@ -236,7 +236,7 @@ public abstract class PaxosNode extends RPCNode {
 		// If we detected a gap, go ahead and propose no-ops for those missing slots.
 		if (instNum == highestExecutedNum + 1) {
 			noteOutput("(" + instNum + ") Executing command");
-			if (state.decidedValue != noopMarker) {
+			if (!Arrays.equals(state.decidedValue, noopMarker)) {
 				handlePaxosCommand(state.instNum, state.decidedValue);
 			} else {
 				noteOutput("(" + instNum + ") No-op command completed");
