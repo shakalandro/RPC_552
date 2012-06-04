@@ -33,7 +33,7 @@ public abstract class PaxosNode extends RPCNode {
 	
 	private int highestExecutedNum = -1;
 	
-	protected final static Integer[] REPLICA_ADDRS = {0, 1, 2, 4};
+	protected final static Integer[] REPLICA_ADDRS = {0, 2, 4};
 	
 	/**
 	 * Clients wishing to replicate some command must call this function. In time either the
@@ -389,10 +389,9 @@ public abstract class PaxosNode extends RPCNode {
 					} else if (state.instNum == this.highestExecutedNum + 1) {
 						handlePaxosCommand(state.instNum, state.value);
 						state.executed = true;
-						this.highestExecutedNum = state.instNum;
-						
-						// Log the fact that we have executed this command.
 						logKnownCommands();
+						this.highestExecutedNum = state.instNum;
+						// Log the fact that we have executed this command.
 					}
 					
 //					if (state.instNum != lastInstNum + 1) {
