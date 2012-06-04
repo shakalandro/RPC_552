@@ -27,6 +27,7 @@ public abstract class PaxosNode extends RPCNode {
 	private static final String COLOR_OUTPUT = "0;34";
 	private static final String COLOR_ERROR = "0;31";
 	private static final Random r = new Random();
+	private static final int MAX_NODES = 1000;
 
 	// State data shared by all roles.
 	private Map<Integer, PaxosState> rounds;
@@ -43,6 +44,9 @@ public abstract class PaxosNode extends RPCNode {
 	 * @param payload The command to replicate.
 	 */
 	public void replicateCommand(List<Integer> addrs, byte[] payload) {
+		if (addrs.size() > MAX_NODES) {
+			throw new IllegalArgumentException("This algorithm breaks if you have more than " + MAX_NODES + " replicas.");
+		}
 		int instNum = getInstNum();
 		rounds.put(instNum, new PaxosState(instNum, getNextPropNum(0), payload, addrs));
 		proposeCommand(addrs, instNum, payload);
@@ -62,17 +66,19 @@ public abstract class PaxosNode extends RPCNode {
 	// Returns a proposal number that is at least twice as large as the given proposal number
 	// and is within a set of numbers unique to this node.
 	private int getNextPropNum(int last) {
-		return (2 * this.addr * ((last / this.addr) + 1));
+		return (this.addr + MAX_NODES * ((last / MAX_NODES) + 1));
 	}
 
 	private void proposeCommand(List<Integer> addrs, Integer instNum, byte[] payload) {
-		proposeCommand(addrs, instNum, payload, STARTING_BACKOFF);
+		PaxosState state = this.rounds.get(instNum);
+		proposeCommand(addrs, instNum, state.propNum, payload, STARTING_BACKOFF);
 	}
 
-	public void proposeCommand(List<Integer> addrs, Integer instNum, byte[] payload, Integer backoff) {
+	public void proposeCommand(List<Integer> addrs, Integer instNum, Integer propNum,
+			byte[] payload, Integer backoff) {
 		PaxosState state = this.rounds.get(instNum);
 		if (!state.decided) {
-			int propNum = this.rounds.get(instNum).propNum;
+			state.propNum = propNum;
 			for (Integer nodeAddr : addrs) {
 				PaxosPacket prepare = PaxosPacket.makePrepareMessage(instNum, propNum, payload);
 				
@@ -84,8 +90,10 @@ public abstract class PaxosNode extends RPCNode {
 			try {
 				Method m = Callback.getMethod("proposeCommand", this,
 						new String[] { List.class.getName(), Integer.class.getName(),
-						byte[].class.getName(), Integer.class.getName(), });
-				Callback retry = new Callback(m, this, new Object[] { addrs, instNum, payload,
+						Integer.class.getName(), byte[].class.getName(), Integer.class.getName()
+						});
+				Callback retry = new Callback(m, this, new Object[] { addrs, instNum,
+						getNextPropNum(propNum), payload,
 						backoff * 2 + r.nextInt() % RANDOM_BACKOFF_MAX });
 				addTimeout(retry, backoff);
 			} catch (Exception e) {
