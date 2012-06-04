@@ -72,7 +72,8 @@ public abstract class PaxosNode extends RPCNode {
 	}
 
 	public void proposeCommand(List<Integer> addrs, Integer instNum, byte[] payload, Integer backoff) {
-		if (!this.rounds.get(instNum).decided) {
+		PaxosState state = this.rounds.get(instNum);
+		if (!state.decided) {
 			int propNum = this.rounds.get(instNum).propNum;
 			for (Integer nodeAddr : addrs) {
 				PaxosPacket prepare = PaxosPacket.makePrepareMessage(instNum, propNum, payload);
@@ -96,7 +97,13 @@ public abstract class PaxosNode extends RPCNode {
 			}
 		} else {
 			noteOutput("(" + instNum + ") Paxos round already decided, no need to propose");
+			retryPaxosCommand(state.participants, state.instNum, state.value);
 		}
+	}
+	
+	// Override this in order to implement custom retry behavior
+	public void retryPaxosCommand(List<Integer> addrs, Integer instNum, byte[] payload) {
+		proposeCommand(addrs, instNum, payload);
 	}
 
 	private void handlePromiseResponse(int from, int instNum, int highestAccept, byte[] payload) {
