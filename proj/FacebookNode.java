@@ -79,6 +79,8 @@ public class FacebookNode extends PaxosNode {
 	public String loggedInUser = null;
 
 	public boolean doingWork = false;
+	
+	protected final static Integer[] REPLICA_ADDRS = {0, 1, 2, 4};
 
 	@Override
 	public void start() {
@@ -888,7 +890,7 @@ public class FacebookNode extends PaxosNode {
 		}
 
 		byte[] paxosPayload = Utility.stringToByteArray(packageArgs(names, message));
-		List<Integer> addrs = Arrays.asList(PaxosNode.REPLICA_ADDRS);
+		List<Integer> addrs = Arrays.asList(REPLICA_ADDRS);
 		super.replicateCommand(addrs, paxosPayload);
 	}
 

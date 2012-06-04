@@ -33,7 +33,6 @@ public abstract class PaxosNode extends RPCNode {
 	
 	private int highestExecutedNum = -1;
 	
-	protected final static Integer[] REPLICA_ADDRS = {0, 2, 4};
 	
 	/**
 	 * Clients wishing to replicate some command must call this function. In time either the
