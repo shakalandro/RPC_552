@@ -33,15 +33,15 @@ public class RPCNode extends RIONode {
 	}
 
 	public static double getRecoveryRate() {
-		return 0.0 / 100.0;
+		return 0 / 100.0;
 	}
 
 	public static double getDropRate() {
-		return 0.0 / 100.0;
+		return 0 / 100.0;
 	}
-
+	
 	public static double getDelayRate() {
-		return 0.0 / 100.0;
+		return 0 / 100.0;
 	}
 
 	/** Colors for console logging */
@@ -115,6 +115,9 @@ public class RPCNode extends RIONode {
 			} catch (IOException e) {
 				// fail ourselves and try again
 				logError("Could not recover log file for put, failing now.");
+				logError("***************************");
+				logError("FAILING!");
+				logError("***************************");
 				fail();
 			}
 		}

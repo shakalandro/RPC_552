@@ -102,9 +102,9 @@ public class PaxosPacket {
 
 			byte[] payload = new byte[packet.length - HEADER_SIZE];
 			int bytesRead = in.read(payload, 0, payload.length);
-			
-			if (payload.length == 0) {
-				payload = null;
+			System.out.println("read: " + bytesRead);
+			if (bytesRead != payload.length) {
+				return null;
 			}
 			return new PaxosPacket(PaxosMsg.getMessage(type), instance, proposal, payload);
 		} catch (IllegalArgumentException e) {
