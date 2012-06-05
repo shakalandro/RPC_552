@@ -29,7 +29,7 @@ public abstract class PaxosNode extends RPCNode {
 	private static final Random r = new Random();
 	private static final int MAX_NODES = 1000;
 	
-	private static final byte[] noopMarker = new byte[] {'.'};
+	private static final byte[] noopMarker = new byte[] {'\0'};
 
 	// State data shared by all roles.
 	private Map<Integer, PaxosState> rounds;
@@ -109,7 +109,8 @@ public abstract class PaxosNode extends RPCNode {
 				noteError("***************************");
 				fail();
 			}
-		} else if (!Arrays.equals(state.value, state.decidedValue)) {
+		// retry if we were a proposer and our value did not win
+		} else if (state.value != null && !Arrays.equals(state.value, state.decidedValue)) {
 			noteOutput("(" + instNum + ") Paxos round already decided, but it wasn't my value, retrying");
 			retryPaxosCommand(state.participants, state.instNum, state.value);
 		} else {
