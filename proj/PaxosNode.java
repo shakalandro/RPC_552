@@ -250,7 +250,7 @@ public abstract class PaxosNode extends RPCNode {
 		// We have detected a gap in the commands. Get all instance numbers that we have detected gaps for and 
 		// propose no-ops for those slots.
 		} else {
-			noteOutput("(" + instNum + ") We have detected a gap");
+			noteOutput("(" + instNum + ") We have detected a gap stretching from " + (this.highestExecutedNum + 1) + " to " + (instNum -1));
 			int gapLength = instNum - this.highestExecutedNum - 1;
 			for (int i = 0; i < gapLength; i++) {
 				learnCommand(Arrays.asList(REPLICA_ADDRS), highestExecutedNum + 1 + i);
@@ -397,51 +397,46 @@ public abstract class PaxosNode extends RPCNode {
 			}
 			
 			PersistentStorageReader in = this.getReader(PAXOS_LOG_FILE);
-			if (!in.ready()) {
+
+			if (in.ready()) {
 				noteError("Recover decisions from log file");
 				char[] data = new char[MAX_FILE_SIZE];
 				in.read(data);
 				String[] commands = new String(data).split("\n");
 
 				for (String s : commands) {
-					PaxosState state = PaxosState.fromLogString(s);
-					noteError("Found round " + state.instNum + " with value: "
+					if (s.trim().length() > 0) {
+						PaxosState state = PaxosState.fromLogString(s);
+						noteError("Found round " + state.instNum + " with value: "
 							+ Utility.byteArrayToString(state.value));
 
-					state.decided = true;
-					this.rounds.put(state.instNum, state);
+						state.decided = true;
+						this.rounds.put(state.instNum, state);
 					
-					// Record the highest known executed command.
-					// If we haven't executed this command, but it is right after a command we have executed, then execute it.
-					if (state.executed) {
-						this.highestExecutedNum = state.instNum;
-					} else if (state.instNum == this.highestExecutedNum + 1) {
-						handlePaxosCommand(state.instNum, state.value);
-						state.executed = true;
-						logKnownCommands();
-						this.highestExecutedNum = state.instNum;
-						// Log the fact that we have executed this command.
+						// Record the highest known executed command.
+						// If we haven't executed this command, but it is right after a command we have executed, then execute it.
+						if (state.executed) {
+							noteOutput("Had already executed round " + state.instNum);
+							this.highestExecutedNum = state.instNum;
+						} else if (state.instNum == this.highestExecutedNum + 1) {
+							// This command has not been executed but is now ready to be executed (no remaining gaps)
+							handlePaxosCommand(state.instNum, state.value);
+							state.executed = true;
+							logKnownCommands();
+							this.highestExecutedNum = state.instNum;
+							noteOutput("Executed next command");
+							// Log the fact that we have executed this command.
+						} else {
+							// This command has not been executed and there are remaining gaps
+							noteError("Attempting to learn missing result for round " + state.instNum);
+							learnCommand(Arrays.asList(REPLICA_ADDRS), state.instNum);
+						}
 					}
-					
-//					if (state.instNum != lastInstNum + 1) {
-//						gapFound = true;
-//					}
-//
-//					// If a gap has been found, then we haven't executed this command (or any following commands.)
-//					// Record this fact in the state.
-//					if (!gapFound) {
-//						//noteError("Sending " + state.instNum + " to client");
-//						//handlePaxosCommand(state.instNum, state.value);
-//						this.highestExecutedNum = state.instNum;
-//					} else {
-//						noteError("Gap detected during recovery");
-//					}
-//					lastInstNum = state.instNum;
 				}
 			}
 		} catch (Exception e) {
 			noteError("Crashed trying to recover commands from log file");
-			System.out.println(e.toString());
+			e.printStackTrace();
 			noteError("***************************");
 			noteError("FAILING");
 			noteError("***************************");

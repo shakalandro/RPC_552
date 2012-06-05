@@ -1,4 +1,5 @@
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
 
 import edu.washington.cs.cse490h.lib.Utility;
 
@@ -94,6 +95,7 @@ public class PaxosState {
 	
 	public static PaxosState fromLogString(String s) {
 		String[] parts = s.split(LOG_SEPERATOR, 3);
-		return new PaxosState(Integer.parseInt(parts[0]), Utility.stringToByteArray(parts[1]), (parts[2].equals(EXECUTED_TRUE_STRING)));
+		boolean executed = parts[2].trim().equals(EXECUTED_TRUE_STRING);
+		return new PaxosState(Integer.parseInt(parts[0]), Utility.stringToByteArray(parts[1]), executed);
 	}
 }
