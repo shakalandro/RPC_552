@@ -5,6 +5,8 @@ import java.util.LinkedList;
 import java.util.Map;
 import java.util.Random;
 
+import javax.print.attribute.standard.PrinterResolution;
+
 import edu.washington.cs.cse490h.lib.Callback;
 import edu.washington.cs.cse490h.lib.Utility;
 
@@ -84,6 +86,9 @@ public class ReliableInOrderMsgLayer {
 	 */
 	public void RIODataReceive(int from, byte[] msg) {
 		RIOPacket riopkt = RIOPacket.unpack(msg);
+		if (riopkt == null) {
+			System.out.println("RIOPKT is null.");
+		}
 
 		// If we don't have an alive connection with them, or their sessionId doesn't match the one we have,
 		// just ignore this packet and send out a SYNC packet to try and get synced up.

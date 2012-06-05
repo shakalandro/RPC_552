@@ -92,11 +92,12 @@ public class FacebookNode extends PaxosNode {
 		pingServers();
 	}
 	
-	// Contacts the servers to keep in touch.
+	// Contacts the servers to keep in touch and make sure that we're all synced up.
 	public void pingServers() {
+		byte[] dummy = {'a', 'b', 'c'};
 		for (Integer replicaNum : REPLICA_ADDRS) {
 			if (replicaNum != this.addr) {
-				this.RIOSend(replicaNum, Protocol.TEST, null);
+				this.RIOSend(replicaNum, Protocol.TEST, dummy);
 			}
 		}
 	}
