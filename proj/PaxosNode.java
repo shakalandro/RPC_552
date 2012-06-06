@@ -115,7 +115,7 @@ public abstract class PaxosNode extends RPCNode {
 			}
 			
 		// retry if we were a proposer and our value did not win
-		} else if (state.value != null && !Arrays.equals(state.value, state.decidedValue)) {
+		} else if (state.value != null && !Arrays.equals(state.value, noopMarker) && !Arrays.equals(state.value, state.decidedValue)) {
 			noteOutput("(" + instNum + ") Paxos round already decided, but it wasn't my value, retrying");
 			retryPaxosCommand(state.participants, state.instNum, state.value);
 		} else {
@@ -187,6 +187,11 @@ public abstract class PaxosNode extends RPCNode {
 			noteOutput("(" + instNum + ") quorum accepted, but decisions already sent");
 			noteOutput("(" + instNum + ") quorum accepted value: "
 					+ Utility.byteArrayToString(payload));
+			for (Integer nodeAddr : state.participants) {
+				PaxosPacket decision = PaxosPacket.makeDecisionMessage(instNum, n, payload);
+				noteOutput("(" + instNum + ") sending decision to " + nodeAddr);
+				RIOSend(nodeAddr, Protocol.PAXOS_PKT, decision.pack());
+			}
 		} else {
 			noteOutput("(" + instNum + ") " + state.numAccepted() + " out of " + state.participants.size() + " accepted");
 		}
