@@ -282,6 +282,7 @@ public abstract class PaxosNode extends RPCNode {
 			state.decidedValue = payload;
 			state.decided = true;
 			logKnownCommands();
+			logKnownStates();
 		}
 		
 		// Execute as much as we can and find any silly gaps.

@@ -98,7 +98,6 @@ public class PaxosState {
 		String[] parts = s.split(LOG_SEPERATOR, 4);
 		this.promisedPropNum = Integer.parseInt(parts[1]);
 		this.acceptedPropNum = Integer.parseInt(parts[2]);
-		this.acceptedValue = parts[3].equals("null") ? PaxosNode.noopMarker : Utility.stringToByteArray(parts[3]);
 	}
 	
 	public static PaxosState getNewPaxosStateFromStateLog(String s, List<Integer> participants) {
