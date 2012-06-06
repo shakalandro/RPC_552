@@ -331,6 +331,7 @@ public abstract class PaxosNode extends RPCNode {
 		if (this.rounds.get(instNum) == null) {
 			this.rounds.put(instNum, new PaxosState(instNum, getNextPropNum(0), noopMarker, addrs));
 		}
+		this.rounds.get(instNum).highestAcceptedNum = -1;
 		proposeCommand(addrs, instNum, noopMarker);
 	}
 
