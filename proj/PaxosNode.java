@@ -352,9 +352,9 @@ public abstract class PaxosNode extends RPCNode {
 				PersistentStorageReader reader = getReader(PAXOS_LOG_FILE);
 
 				char[] buf = new char[MAX_FILE_SIZE];
-				reader.read(buf, 0, MAX_FILE_SIZE);
+				int len = reader.read(buf);
 
-				String oldFileData = new String(buf);
+				String oldFileData = new String(buf, 0, len);
 
 				// Put old file contents into temp file
 				PersistentStorageWriter writer = this.getWriter(TEMP_PAXOS_LOG_FILE, false);
@@ -397,9 +397,9 @@ public abstract class PaxosNode extends RPCNode {
 				PersistentStorageReader reader = getReader(PAXOS_STATE_FILE);
 
 				char[] buf = new char[MAX_FILE_SIZE];
-				reader.read(buf, 0, MAX_FILE_SIZE);
+				int len = reader.read(buf);
 
-				String oldFileData = new String(buf);
+				String oldFileData = new String(buf, 0, len);
 
 				// Put old file contents into temp file
 				PersistentStorageWriter writer = this.getWriter(TEMP_PAXOS_STATE_FILE, false);
@@ -493,9 +493,9 @@ public abstract class PaxosNode extends RPCNode {
 				} else {
 					noteError("Recovery old log file");
 					char[] buf = new char[MAX_FILE_SIZE];
-					reader.read(buf, 0, MAX_FILE_SIZE);
+					int len = reader.read(buf);
 					PersistentStorageWriter writer = this.getWriter(PAXOS_LOG_FILE, false);
-					String oldFile = new String(buf);
+					String oldFile = new String(buf, 0, len);
 					writer.write(oldFile.trim());
 
 					// Delete temp file.
@@ -523,8 +523,8 @@ public abstract class PaxosNode extends RPCNode {
 			if (in.ready()) {
 				noteError("Recover decisions from log file");
 				char[] data = new char[MAX_FILE_SIZE];
-				in.read(data);
-				String[] commands = new String(data).split("\n");
+				int len = in.read(data);
+				String[] commands = new String(data, 0, len).split("\n");
 
 				for (String s : commands) {
 					if (s.trim().length() > 0) {
@@ -561,9 +561,9 @@ public abstract class PaxosNode extends RPCNode {
 				} else {
 					noteError("Recovery old log file");
 					char[] buf = new char[MAX_FILE_SIZE];
-					reader.read(buf, 0, MAX_FILE_SIZE);
+					int len = reader.read(buf);
 					PersistentStorageWriter writer = this.getWriter(PAXOS_STATE_FILE, false);
-					String oldFile = new String(buf);
+					String oldFile = new String(buf, 0, len);
 					writer.write(oldFile.trim());
 
 					// Delete temp file.
@@ -592,8 +592,8 @@ public abstract class PaxosNode extends RPCNode {
 			if (in.ready()) {
 				noteError("Recovering PaxosState information from state log file");
 				char[] data = new char[MAX_FILE_SIZE];
-				in.read(data);
-				String[] states = new String(data).split("\n");
+				int len = in.read(data);
+				String[] states = new String(data, 0, len).split("\n");
 
 				for (String s : states) {
 					if (s.trim().length() > 0) {
