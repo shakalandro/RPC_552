@@ -117,6 +117,8 @@ public abstract class PaxosNode extends RPCNode {
 		// retry if we were a proposer and our value did not win
 		} else if (state.value != null && !Arrays.equals(state.value, noopMarker) && !Arrays.equals(state.value, state.decidedValue)) {
 			noteOutput("(" + instNum + ") Paxos round already decided, but it wasn't my value, retrying");
+			noteOutput("(" + instNum + ") Decided value was: " + Utility.byteArrayToString(state.decidedValue) + 
+					" but my value is " + Utility.byteArrayToString(state.value));
 			retryPaxosCommand(state.participants, state.instNum, state.value);
 		} else {
 			noteOutput("(" + instNum + ") Paxos round already decided, and I won, no need to try again");
