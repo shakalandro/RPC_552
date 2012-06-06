@@ -94,9 +94,7 @@ public class FacebookNode extends PaxosNode {
 	public void pingServers() {
 		byte[] dummy = {'a', 'b', 'c'};
 		for (Integer replicaNum : REPLICA_ADDRS) {
-			if (replicaNum != this.addr) {
-				this.RIOSend(replicaNum, Protocol.TEST, dummy);
-			}
+			this.RIOSend(replicaNum, Protocol.TEST, dummy);
 		}
 	}
 
@@ -109,11 +107,20 @@ public class FacebookNode extends PaxosNode {
 		}
 		
 		String args = Utility.byteArrayToString(value);
+		
+		// If the args is null, then just ignore it.
+		if (args == null) {
+			printError("Got a null Paxos Command.");
+			return;
+		}
+		
 		Object[] objArgs = parseArgs(args);
 
 		@SuppressWarnings("unchecked")
 		List<String> nameList = (List<String>) objArgs[0];
 		String message = (String) objArgs[1];
+		
+		printOutput("Message length is " + message.length());
 
 		try {
 			// Delete any temp files from previous transactions.
@@ -121,6 +128,7 @@ public class FacebookNode extends PaxosNode {
 			for (File f : oldTemps) {
 				String instNumString = String.valueOf(instNum);
 				String filePaxosString = f.getName().substring(f.getName().indexOf("||") + 2);
+				printOutput("Comparing " + instNumString + " and " + filePaxosString);
 				if (!filePaxosString.equals(instNumString)) {
 					// It's a temp file for a previous transaction. We can get rid of it.
 					printOutput("Deleting temp file " + f.getName());
@@ -130,7 +138,7 @@ public class FacebookNode extends PaxosNode {
 
 			// For all of the people we're going to post to...
 			for (String name : nameList) {
-				// If the messages file doesn't exist for this name. Just create it know.
+				// If the messages file doesn't exist for this name. Just create it now.
 				if (!Utility.fileExists(this, MESSAGES_PREFIX + name)) {
 					PersistentStorageWriter messagesFileWriter = this.getWriter(MESSAGES_PREFIX + name, false);
 					printOutput("Just created the file " + MESSAGES_PREFIX + name);
@@ -144,26 +152,32 @@ public class FacebookNode extends PaxosNode {
 				}
 
 				if (tempReader != null && tempReader.ready()) {
+					printOutput("Recovering from temp file for " + name + ".");
 					// Read in the temp file contents and then write those contents to the old posts
 					// file.
 					char[] buf = new char[MAX_FILE_SIZE];
-					tempReader.read(buf, 0, MAX_FILE_SIZE);
+					int len = tempReader.read(buf);
 					PersistentStorageWriter postsFileWriter =
 							this.getWriter(MESSAGES_PREFIX + name, false);
-					postsFileWriter.write(buf);
+					
+					String tempFile = new String(buf, 0, len);
+					printOutput("Writing to master file: " + tempFile);
+					
+					postsFileWriter.write(tempFile);
+					
 				} else {
+					printOutput("No good temp file. Just going to write temp then write master for " + name +".");
+
 					// The temp file is either created but not written or not created at all. In
-					// either case,
-					// it does not contain a version with the appended message. So we need to append
-					// the message on
-					// the wall posts file and then write that to a temp file before then writing it
-					// to the actual
-					// file.
+					// either case, it does not contain a version with the appended message. So we need to append
+					// the message on the wall posts file and then write that to a temp file before then writing it
+					// to the actual file.
 					assert (Utility.fileExists(this, MESSAGES_PREFIX + name));
 					PersistentStorageReader masterFileReader =
 							this.getReader(MESSAGES_PREFIX + name);
 					char[] buf = new char[MAX_FILE_SIZE];
-					int length = masterFileReader.read(buf, 0, MAX_FILE_SIZE);
+					int length = masterFileReader.read(buf);
+					printOutput("old master file as length " + length);
 
 					String contents;
 					if (length == -1) {
@@ -171,6 +185,9 @@ public class FacebookNode extends PaxosNode {
 					} else {
 						contents = new String(buf, 0, length);
 					}
+					
+					printOutput("Old master file: " + contents);
+					
 					contents += message + '\n';
 
 					// Write message contents to the temp file.
@@ -178,9 +195,14 @@ public class FacebookNode extends PaxosNode {
 					// we can still recover nicely!
 					PersistentStorageWriter tempWriter = this.getWriter(tempFileName, false);
 					tempWriter.write(contents);
+					
+					printOutput("Just wrote to temp file: " + contents);
+					
 					PersistentStorageWriter masterWriter =
 							this.getWriter(MESSAGES_PREFIX + name, false);
 					masterWriter.write(contents);
+					
+					printOutput("Just wrote to master: " + contents);
 				}
 			}
 		} catch (Exception e) {

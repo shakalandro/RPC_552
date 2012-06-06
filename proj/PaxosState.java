@@ -26,9 +26,14 @@ public class PaxosState {
 	public boolean acceptRequestsSent;
 	
 	//Acceptor State
+	
+	// JENNY: This value should be written to log whenever changed and read in on start.
 	public int promisedPropNum;
+	
 	public int acceptedPropNum;
 	public int highestExecutedInstNum;
+	
+	// JENNY: This value should be written to log whenever changed and read in on start.
 	public byte[] acceptedValue;
 	
 	//Learner State
@@ -36,7 +41,7 @@ public class PaxosState {
 	
 	public PaxosState(int instNum, byte[] value, boolean executed) {
 		this(instNum, -1, value);
-		this.decided = true;
+		this.decided = false;
 		this.executed = executed;
 	}
 	
@@ -51,7 +56,7 @@ public class PaxosState {
 		this.instNum = instNum;
 		this.propNum = propNum;
 		this.value = value;
-		this.highestAcceptedNum = propNum;
+		this.highestAcceptedNum = -1;
 		this.highestAcceptedValue = value;
 		this.promisedPropNum = -1;
 		this.acceptedPropNum = -1;
@@ -84,7 +89,7 @@ public class PaxosState {
 	}
 	
 	public String toLogString() {
-		return this.instNum + LOG_SEPERATOR + Utility.byteArrayToString(this.value) + LOG_SEPERATOR + (this.decided ? EXECUTED_TRUE_STRING : EXECUTED_FALSE_STRING);
+		return this.instNum + LOG_SEPERATOR + Utility.byteArrayToString(this.decidedValue) + LOG_SEPERATOR + (this.executed ? EXECUTED_TRUE_STRING : EXECUTED_FALSE_STRING);
 	}
 	
 	// for debugging
@@ -96,6 +101,11 @@ public class PaxosState {
 	public static PaxosState fromLogString(String s) {
 		String[] parts = s.split(LOG_SEPERATOR, 3);
 		boolean executed = parts[2].trim().equals(EXECUTED_TRUE_STRING);
-		return new PaxosState(Integer.parseInt(parts[0]), Utility.stringToByteArray(parts[1]), executed);
+		PaxosState state = new PaxosState(Integer.parseInt(parts[0]), Utility.stringToByteArray(parts[1]), executed);
+		state.decidedValue = state.value;
+		state.decided = true;
+		state.acceptedValue = state.value;
+		
+		return state;
 	}
 }

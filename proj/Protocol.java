@@ -114,6 +114,8 @@ public class Protocol {
             return "RPC Request Packet";
         case RPC_RESULT_PKT:
             return "RPC Reply Packet";
+        case TEST:
+        	return "Test Packet";
         default:
             return "Unknown Protocol";
         }

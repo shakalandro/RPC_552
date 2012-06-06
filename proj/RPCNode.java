@@ -29,19 +29,19 @@ public class RPCNode extends RIONode {
 //	 public static double getDelayRate() { return MessageLayer.rpcDelay / 100.0; }
 
 	public static double getFailureRate() {
-		return 0 / 100.0;
+		return 1 / 100.0;
 	}
 
 	public static double getRecoveryRate() {
-		return 0 / 100.0;
+		return 20 / 100.0;
 	}
 
 	public static double getDropRate() {
-		return 0 / 100.0;
+		return 20 / 100.0;
 	}
 	
 	public static double getDelayRate() {
-		return 0 / 100.0;
+		return 30 / 100.0;
 	}
 
 	/** Colors for console logging */

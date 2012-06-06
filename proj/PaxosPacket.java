@@ -23,13 +23,13 @@ public class PaxosPacket {
 	
 	
 	// This factory method is best for a prepare message
-	public static PaxosPacket makePrepareMessage(int instance, int proposal, byte[] payload) {
-		return new PaxosPacket(PaxosMsg.PREPARE, instance, proposal, payload);
+	public static PaxosPacket makePrepareMessage(int instanc, int proposa, byte[] payloa) {
+		return new PaxosPacket(PaxosMsg.PREPARE, instanc, proposa, payloa);
 	}
 	
 	// This factory method is best for a promise message
-	public static PaxosPacket makePromiseMessage(int instance, int highest, byte[] payload) {
-		return new PaxosPacket(PaxosMsg.PROMISE, instance, highest, payload);
+	public static PaxosPacket makePromiseMessage(int instanc, int highes, byte[] payloa) {
+		return new PaxosPacket(PaxosMsg.PROMISE, instanc, highes, payloa);
 	}
 	
 	// This factory method is best for an accept message
