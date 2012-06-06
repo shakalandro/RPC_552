@@ -109,7 +109,7 @@ public class FacebookNode extends PaxosNode {
 		String args = Utility.byteArrayToString(value);
 		
 		// If the args is null, then just ignore it.
-		if (args == null) {
+		if (args == null || Arrays.equals(value, PaxosNode.noopMarker)) {
 			printError("Got a null Paxos Command.");
 			return;
 		}

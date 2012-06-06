@@ -75,9 +75,7 @@ public class PaxosPacket {
             out.writeInt(instance);
             out.writeInt(proposal);
             
-            if (payload != null) {
-            	out.write(payload, 0, payload.length);
-            }
+            out.write(payload, 0, payload.length);
 
 			out.flush();
 			out.close();

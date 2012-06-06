@@ -1,5 +1,6 @@
-import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import edu.washington.cs.cse490h.lib.Utility;
 
@@ -18,41 +19,32 @@ public class PaxosState {
 	//Proposer State
 	public byte[] value;
 	public List<Integer> participants;
-	public List<Integer> promised;
-	public List<Integer> accepted;
+	public Set<Integer> promised;
+	public Set<Integer> accepted;
 	public int highestAcceptedNum;
 	public byte[] highestAcceptedValue;
 	public boolean decisionsSent;
 	public boolean acceptRequestsSent;
 	
 	//Acceptor State
-	
-	// JENNY: This value should be written to log whenever changed and read in on start.
 	public int promisedPropNum;
-	
 	public int acceptedPropNum;
 	public int highestExecutedInstNum;
-	
-	// JENNY: This value should be written to log whenever changed and read in on start.
 	public byte[] acceptedValue;
 	
 	//Learner State
 	public byte[] decidedValue;
 	
-	public PaxosState(int instNum, byte[] value, boolean executed) {
-		this(instNum, -1, value);
+	public PaxosState(int instNum, byte[] value, boolean executed, List<Integer> participants) {
+		this(instNum, -1, value, participants);
 		this.decided = false;
 		this.executed = executed;
 	}
 	
-	public PaxosState(int instNum, int propNum, byte[] value) {
-		this(instNum, propNum, value, null);
-	}
-	
 	public PaxosState(int instNum, int propNum, byte[] value, List<Integer> participants) {
 		this.executed = false;
-		this.promised = new ArrayList<Integer>();
-		this.accepted = new ArrayList<Integer>();
+		this.promised = new HashSet<Integer>();
+		this.accepted = new HashSet<Integer>();
 		this.instNum = instNum;
 		this.propNum = propNum;
 		this.value = value;
@@ -92,16 +84,50 @@ public class PaxosState {
 		return this.instNum + LOG_SEPERATOR + Utility.byteArrayToString(this.decidedValue) + LOG_SEPERATOR + (this.executed ? EXECUTED_TRUE_STRING : EXECUTED_FALSE_STRING);
 	}
 	
+	public String toStateLogString() {
+		return this.instNum + LOG_SEPERATOR + this.promisedPropNum + LOG_SEPERATOR + 
+				this.acceptedPropNum + LOG_SEPERATOR + (this.acceptedValue == null ? "null" : Utility.byteArrayToString(this.acceptedValue));
+	}
+	
+	public static int getInstNumFromStateLog(String s) {
+		String[] parts = s.split(LOG_SEPERATOR, 4);
+		return Integer.parseInt(parts[0]);
+	}
+	
+	public void updateFromStateLogString(String s) {
+		String[] parts = s.split(LOG_SEPERATOR, 4);
+		this.promisedPropNum = Integer.parseInt(parts[1]);
+		this.acceptedPropNum = Integer.parseInt(parts[2]);
+		this.acceptedValue = parts[3].equals("null") ? PaxosNode.noopMarker : Utility.stringToByteArray(parts[3]);
+	}
+	
+	public static PaxosState getNewPaxosStateFromStateLog(String s, List<Integer> participants) {
+		// Read data from state log 
+		String[] parts = s.split(LOG_SEPERATOR, 4);
+		int theInstance = Integer.parseInt(parts[0]);
+		int thePromisedPropNum = Integer.parseInt(parts[1]);
+		int theAcceptedPropNum = Integer.parseInt(parts[2]);
+		byte [] theAcceptedValue = parts[3].equals("null") ? PaxosNode.noopMarker : Utility.stringToByteArray(parts[3]);
+		PaxosState state = new PaxosState(theInstance, thePromisedPropNum, theAcceptedValue, participants);
+		
+		// Update state
+		state.promisedPropNum = thePromisedPropNum;
+		state.acceptedPropNum = theAcceptedPropNum;
+		state.acceptedValue = theAcceptedValue;
+		
+		return state;
+	}
+	
 	// for debugging
 	public String toString() {
 		return "(" + this.instNum + ") prop:" + this.propNum + ", promise:" + this.promisedPropNum +
 				", accepted:" + this.acceptedPropNum + ", payload:" + Utility.byteArrayToString(this.value); 
 	}
 	
-	public static PaxosState fromLogString(String s) {
+	public static PaxosState fromLogString(String s, List<Integer> participants) {
 		String[] parts = s.split(LOG_SEPERATOR, 3);
 		boolean executed = parts[2].trim().equals(EXECUTED_TRUE_STRING);
-		PaxosState state = new PaxosState(Integer.parseInt(parts[0]), Utility.stringToByteArray(parts[1]), executed);
+		PaxosState state = new PaxosState(Integer.parseInt(parts[0]), Utility.stringToByteArray(parts[1]), executed, participants);
 		state.decidedValue = state.value;
 		state.decided = true;
 		state.acceptedValue = state.value;

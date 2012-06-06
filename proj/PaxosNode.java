@@ -3,7 +3,6 @@ import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 import java.util.TreeMap;
@@ -24,12 +23,14 @@ public abstract class PaxosNode extends RPCNode {
 	private static final int RANDOM_BACKOFF_MAX = 20;
 	private static final String PAXOS_LOG_FILE = ".paxos";
 	private static final String TEMP_PAXOS_LOG_FILE = PAXOS_LOG_FILE + "_temp";
+	private static final String PAXOS_STATE_FILE = ".paxos_state";
+	private static final String TEMP_PAXOS_STATE_FILE = PAXOS_STATE_FILE + "_temp";
 	private static final String COLOR_OUTPUT = "0;34";
 	private static final String COLOR_ERROR = "0;31";
 	private static final Random r = new Random();
 	private static final int MAX_NODES = 1000;
 	
-	private static final byte[] noopMarker = new byte[] {'\0'};
+	public static final byte[] noopMarker = Utility.stringToByteArray("NOOP_MARKER");
 
 	// State data shared by all roles.
 	private TreeMap<Integer, PaxosState> rounds;
@@ -173,7 +174,7 @@ public abstract class PaxosNode extends RPCNode {
 	private void handleAcceptResponse(int from, int instNum, int n, byte[] payload) {
 		PaxosState state = this.rounds.get(instNum);
 		state.accepted.add(from);
-		if (!Arrays.equals(payload, noopMarker) && state.quorumAccepted() && !state.decisionsSent) {
+		if (state.quorumAccepted() && !state.decisionsSent) {
 			noteOutput("(" + instNum + ") quorum accepted value: "
 					+ Utility.byteArrayToString(payload));
 			for (Integer nodeAddr : state.participants) {
@@ -186,12 +187,6 @@ public abstract class PaxosNode extends RPCNode {
 			noteOutput("(" + instNum + ") quorum accepted, but decisions already sent");
 			noteOutput("(" + instNum + ") quorum accepted value: "
 					+ Utility.byteArrayToString(payload));
-			for (Integer nodeAddr : state.participants) {
-				PaxosPacket decision = PaxosPacket.makeDecisionMessage(instNum, n, payload);
-				noteOutput("(" + instNum + ") sending decision to " + nodeAddr);
-				RIOSend(nodeAddr, Protocol.PAXOS_PKT, decision.pack());
-			}
-			state.decisionsSent = true;
 		} else {
 			noteOutput("(" + instNum + ") " + state.numAccepted() + " out of " + state.participants.size() + " accepted");
 		}
@@ -205,12 +200,13 @@ public abstract class PaxosNode extends RPCNode {
 		PaxosState state = this.rounds.get(instNum);
 		if (state == null) {
 			noteOutput("(" + instNum + ") Prepare request for unknown round, creating state for it");
-			state = new PaxosState(instNum, n, payload);
+			state = new PaxosState(instNum, n, payload, Arrays.asList(REPLICA_ADDRS));
 			this.rounds.put(instNum, state);
 		}
 		
 		if (n > state.promisedPropNum) {
 			state.promisedPropNum = n;
+			logKnownStates();
 			PaxosPacket promise =
 					PaxosPacket.makePromiseMessage(state.instNum, state.acceptedPropNum,
 							(state.acceptedValue == null) ? payload : state.acceptedValue);
@@ -231,9 +227,10 @@ public abstract class PaxosNode extends RPCNode {
 			return;
 		}
 		
-		if (n >= state.promisedPropNum) {
+		if (n >= state.promisedPropNum && (state.decidedValue == null || Arrays.equals(state.decidedValue, payload))) {
 			state.acceptedPropNum = n;
 			state.acceptedValue = payload;
+			logKnownStates();
 			PaxosPacket accepted = PaxosPacket.makeAcceptedMessage(instNum, n, payload);
 			noteOutput("(" + instNum + ") Accepted prop " + n + " with payload " + Utility.byteArrayToString(payload));
 			RIOSend(from, Protocol.PAXOS_PKT, accepted.pack());
@@ -262,7 +259,7 @@ public abstract class PaxosNode extends RPCNode {
 		// If we didn't know about this state before, make a new state object and store it in our rounds.
 		if (state == null) {
 			noteOutput("(" + instNum + ") I was unaware of this round, creating state for it");
-			state = new PaxosState(instNum, payload, false);
+			state = new PaxosState(instNum, payload, false, Arrays.asList(REPLICA_ADDRS));
 			this.rounds.put(instNum, state);
 		}
 		
@@ -289,18 +286,14 @@ public abstract class PaxosNode extends RPCNode {
 	
 	// Checks for a gap in our knowledge of the rounds. A gap is a slot that we don't know about.
 	private void checkAndHandleGaps() {
-		// Find the highest consecutive round that we know about.
-		int highestConsecutiveRound = -1;
-		while (rounds.containsKey(highestConsecutiveRound + 1)) {
-			highestConsecutiveRound++;
+		int maxKnown = this.rounds.lastKey();
+		for (int i = 0; i <= maxKnown; i++) {
+			if (!this.rounds.containsKey(i) || i > highestExecutedNum) {
+				noteOutput("Detected a gap at slot " + i);
+				learnCommand(Arrays.asList(REPLICA_ADDRS), i);
+			} 
 		}
 		
-		// Now check if there is an even bigger round.
-		int highestOverallRound = rounds.lastKey();
-		if (highestConsecutiveRound != highestOverallRound) {
-			noteOutput("Detected a gap at slot " + (highestConsecutiveRound + 1));
-			learnCommand(Arrays.asList(REPLICA_ADDRS), highestConsecutiveRound + 1);
-		}				
 	}
 	
 	// Executes as many known commands as we can.
@@ -335,7 +328,9 @@ public abstract class PaxosNode extends RPCNode {
 	// Use this to propose a no-op in order to either put a no-op in place or ferret out the actual 
 	// value selected for a round.
 	private void learnCommand(List<Integer> addrs, int instNum) {
-		this.rounds.put(instNum, new PaxosState(instNum, getNextPropNum(0), noopMarker, addrs));
+		if (this.rounds.get(instNum) == null) {
+			this.rounds.put(instNum, new PaxosState(instNum, getNextPropNum(0), noopMarker, addrs));
+		}
 		proposeCommand(addrs, instNum, noopMarker);
 	}
 
@@ -354,7 +349,7 @@ public abstract class PaxosNode extends RPCNode {
 
 				// Put old file contents into temp file
 				PersistentStorageWriter writer = this.getWriter(TEMP_PAXOS_LOG_FILE, false);
-				writer.write(oldFileData);
+				writer.write(oldFileData.trim());
 				writer.close();
 
 			}
@@ -379,6 +374,49 @@ public abstract class PaxosNode extends RPCNode {
 		} catch (Exception e) {
 			noteError("***************************");
 			noteError("FAILING! (logging known commands)");
+			noteError("***************************");
+			fail();
+		}
+	}
+	
+	// logs all of the known commands to persistent storage with the put recovery method
+	private void logKnownStates() {
+		try {
+			if (Utility.fileExists(this, PAXOS_STATE_FILE)) {
+
+				// Get old file contents into string
+				PersistentStorageReader reader = getReader(PAXOS_STATE_FILE);
+
+				char[] buf = new char[MAX_FILE_SIZE];
+				reader.read(buf, 0, MAX_FILE_SIZE);
+
+				String oldFileData = new String(buf);
+
+				// Put old file contents into temp file
+				PersistentStorageWriter writer = this.getWriter(TEMP_PAXOS_STATE_FILE, false);
+				writer.write(oldFileData.trim());
+				writer.close();
+
+			}
+			
+			// Write commands data to log file
+			PersistentStorageWriter logFile = this.getWriter(PAXOS_STATE_FILE, false);
+			String logData = "";
+			for (int instNum : this.rounds.keySet()) {
+				logData += this.rounds.get(instNum).toStateLogString().trim() + "\n";
+			}
+			noteError("Logging state data: " + logData);
+			logFile.write(logData.trim());
+			logFile.close();
+
+			// Delete temp file
+			PersistentStorageWriter writer = this.getWriter(TEMP_PAXOS_STATE_FILE, false);
+			writer.delete();
+			writer.close();
+			
+		} catch (Exception e) {
+			noteError("***************************");
+			noteError("FAILING! (logging state information)");
 			noteError("***************************");
 			fail();
 		}
@@ -448,7 +486,8 @@ public abstract class PaxosNode extends RPCNode {
 					char[] buf = new char[MAX_FILE_SIZE];
 					reader.read(buf, 0, MAX_FILE_SIZE);
 					PersistentStorageWriter writer = this.getWriter(PAXOS_LOG_FILE, false);
-					writer.write(buf);
+					String oldFile = new String(buf);
+					writer.write(oldFile.trim());
 
 					// Delete temp file.
 					PersistentStorageWriter deleter = this.getWriter(TEMP_PAXOS_LOG_FILE, false);
@@ -480,8 +519,8 @@ public abstract class PaxosNode extends RPCNode {
 
 				for (String s : commands) {
 					if (s.trim().length() > 0) {
-						PaxosState state = PaxosState.fromLogString(s);
-						noteError("Found round " + state.instNum + " with value: "
+						PaxosState state = PaxosState.fromLogString(s, Arrays.asList(REPLICA_ADDRS));
+						noteOutput("Found round " + state.instNum + " with value: "
 							+ Utility.byteArrayToString(state.value));
 														
 						this.rounds.put(state.instNum, state);
@@ -494,10 +533,78 @@ public abstract class PaxosNode extends RPCNode {
 					}
 				}
 			}
+		} catch (Exception e) {
+			noteError("Crashed trying to recover commands from log file");
+			e.printStackTrace();
+			noteError("***************************");
+			noteError("FAILING");
+			noteError("***************************");
+			fail();
+		}
+		
+		// Recover old state data file if necessary
+		if (Utility.fileExists(this, TEMP_PAXOS_STATE_FILE)) {
+			try {
+				PersistentStorageReader reader = this.getReader(TEMP_PAXOS_STATE_FILE);
+				if (!reader.ready()) {
+					PersistentStorageWriter deleter = this.getWriter(TEMP_PAXOS_STATE_FILE, false);
+					deleter.delete();
+				} else {
+					noteError("Recovery old log file");
+					char[] buf = new char[MAX_FILE_SIZE];
+					reader.read(buf, 0, MAX_FILE_SIZE);
+					PersistentStorageWriter writer = this.getWriter(PAXOS_STATE_FILE, false);
+					String oldFile = new String(buf);
+					writer.write(oldFile.trim());
+
+					// Delete temp file.
+					PersistentStorageWriter deleter = this.getWriter(TEMP_PAXOS_STATE_FILE, false);
+					deleter.delete();
+				}
+			} catch (IOException e) {
+				// Fail ourselves and try again
+				noteError("Crashed trying to recover old log file");
+				noteError("***************************");
+				noteError("FAILING!");
+				noteError("***************************");
+				fail();
+			}
+		}
+		
+		// Recover PaxosState state data from log file.
+		try {
+			if (!Utility.fileExists(this, PAXOS_STATE_FILE)) {
+				noteOutput("State log file doesn't yet exist.");
+				return;
+			}
 			
-			// Now that we've read in from the log, see if we need to clean anything up.
-			catchUpExecution();
-			checkAndHandleGaps();
+			PersistentStorageReader in = this.getReader(PAXOS_STATE_FILE);
+
+			if (in.ready()) {
+				noteError("Recovering PaxosState information from state log file");
+				char[] data = new char[MAX_FILE_SIZE];
+				in.read(data);
+				String[] states = new String(data).split("\n");
+
+				for (String s : states) {
+					if (s.trim().length() > 0) {
+						int instNum = PaxosState.getInstNumFromStateLog(s);
+						PaxosState state = this.rounds.get(instNum);
+						
+						if (state == null) {
+							state = PaxosState.getNewPaxosStateFromStateLog(s, Arrays.asList(REPLICA_ADDRS));
+							this.rounds.put(instNum, state);
+						} else {
+							state.updateFromStateLogString(s);
+						}
+						
+						noteOutput("Found round " + instNum + " promised prop number: " + state.promisedPropNum
+								+ " and accepted prop num: " + state.acceptedPropNum + " and accepted value: "
+							+ Utility.byteArrayToString(state.acceptedValue));
+					}
+				}
+			}
+			
 			
 		} catch (Exception e) {
 			noteError("Crashed trying to recover commands from log file");
@@ -507,5 +614,9 @@ public abstract class PaxosNode extends RPCNode {
 			noteError("***************************");
 			fail();
 		}
+		
+		// Now that we've read in from the log, see if we need to clean anything up.
+		catchUpExecution();
+		checkAndHandleGaps();
 	}
 }
